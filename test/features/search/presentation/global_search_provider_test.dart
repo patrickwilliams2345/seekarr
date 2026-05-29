@@ -60,7 +60,7 @@ void main() {
 
     final groups = await container.read(globalSearchResultsProvider.future);
 
-    expect(groups.map((group) => group.service), ServiceKey.values);
+    expect(groups.map((group) => group.service), ServiceKey.values.where((s) => s.isSearchable));
     expect(groups.expand((group) => group.results).map((item) => item.title), [
       'Dune: Part Two',
       'Dune',

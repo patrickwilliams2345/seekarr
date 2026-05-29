@@ -227,7 +227,7 @@ class ManualImportItem {
       ServiceKey.radarr => movie != null,
       ServiceKey.sonarr => series != null && episodes.isNotEmpty,
       ServiceKey.lidarr => artist != null && album != null && tracks.isNotEmpty,
-      ServiceKey.seerr => false,
+      _ => false,
     };
   }
 
@@ -268,7 +268,7 @@ class ManualImportItem {
                 .whereType<int>()
                 .where((id) => id > 0)
                 .isEmpty,
-      ServiceKey.seerr => true,
+      _ => true,
     };
   }
 
@@ -313,7 +313,7 @@ class ManualImportItem {
             ? tracks
             : [assignment.track!.raw];
         break;
-      case ServiceKey.seerr:
+      case _:
         break;
     }
 
@@ -614,8 +614,8 @@ class ManualImportItem {
           'disableReleaseSwitching': disableReleaseSwitching,
           'languages': null,
         });
-      case ServiceKey.seerr:
-        throw ArgumentError('Seerr does not support manual import');
+      case _:
+        throw ArgumentError('${service.title} does not support manual import');
     }
   }
 
@@ -661,8 +661,8 @@ class ManualImportItem {
               .toList(),
           'disableReleaseSwitching': disableReleaseSwitching,
         });
-      case ServiceKey.seerr:
-        throw ArgumentError('Seerr does not support manual import');
+      case _:
+        throw ArgumentError('${service.title} does not support manual import');
     }
   }
 }
@@ -688,14 +688,14 @@ class ManualImportLookupResult {
       ServiceKey.radarr || ServiceKey.sonarr => stringOrNull(json['title']),
       ServiceKey.lidarr =>
         stringOrNull(json['artistName']) ?? stringOrNull(json['title']),
-      ServiceKey.seerr => stringOrNull(json['title']),
+      _ => stringOrNull(json['title']),
     };
     final subtitle = switch (service) {
       ServiceKey.radarr || ServiceKey.sonarr => stringOrNull(json['year']),
       ServiceKey.lidarr =>
         stringOrNull(json['disambiguation']) ??
             stringOrNull(json['artistType']),
-      ServiceKey.seerr => null,
+      _ => null,
     };
 
     return ManualImportLookupResult(

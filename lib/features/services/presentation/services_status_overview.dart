@@ -44,10 +44,7 @@ class ServiceStatusGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     final services = ServiceKey.values
-        .where(
-          (s) =>
-              settings.urlFor(s).isNotEmpty && settings.apiKeyFor(s).isNotEmpty,
-        )
+        .where((s) => settings.isServiceConfigured(s))
         .toList(growable: false);
 
     if (services.isEmpty) return const SizedBox.shrink();

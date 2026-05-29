@@ -24,6 +24,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _urlController;
   late final TextEditingController _apiKeyController;
+  late final TextEditingController _usernameController;
+  late final TextEditingController _passwordController;
+
+  bool get isQbittorrent => widget.service == ServiceKey.qbittorrent;
 
   @override
   void initState() {
@@ -33,7 +37,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       text: settings.urlFor(widget.service),
     );
     _apiKeyController = TextEditingController(
-      text: settings.apiKeyFor(widget.service),
+      text: isQbittorrent ? '' : settings.apiKeyFor(widget.service),
+    );
+    _usernameController = TextEditingController(
+      text: isQbittorrent ? settings.usernameFor(widget.service) : '',
+    );
+    _passwordController = TextEditingController(
+      text: isQbittorrent ? settings.passwordFor(widget.service) : '',
     );
   }
 
@@ -41,6 +51,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   void dispose() {
     _urlController.dispose();
     _apiKeyController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -59,6 +71,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   SettingsModel _updateServiceSettings(SettingsModel current) {
+    if (isQbittorrent) {
+      return current.copyWithQbittorrent(
+        url: _urlController.text.trim(),
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+    }
     return current.copyWithService(
       widget.service,
       url: _urlController.text.trim(),
@@ -82,7 +101,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             const SizedBox(height: AppSpacing.lg),
             _buildUrlField(),
             const SizedBox(height: AppSpacing.lg),
-            _buildApiKeyField(),
+            if (isQbittorrent) _buildUsernameField() else _buildApiKeyField(),
+            if (isQbittorrent) ...[
+              const SizedBox(height: AppSpacing.lg),
+              _buildPasswordField(),
+            ],
           ],
         ),
       ),
@@ -141,6 +164,38 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
+  Widget _buildUsernameField() {
+    return TextFormField(
+      controller: _usernameController,
+      decoration: const InputDecoration(
+        labelText: 'Username',
+        hintText: 'Optional',
+      ),
+      keyboardType: TextInputType.text,
+      textInputAction: TextInputAction.next,
+      autocorrect: false,
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      controller: _passwordController,
+      decoration: InputDecoration(
+        labelText: 'Password',
+        hintText: 'Optional',
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.copy),
+          onPressed: _copyPassword,
+          tooltip: 'Copy password',
+        ),
+      ),
+      keyboardType: TextInputType.visiblePassword,
+      textInputAction: TextInputAction.done,
+      onFieldSubmitted: (_) => _saveSettings(),
+      obscureText: true,
+    );
+  }
+
   String? _validateApiKey(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'API Key is required';
@@ -154,6 +209,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (apiKey.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: apiKey));
       SnackBarHelper.info(context, 'API key copied to clipboard');
+    }
+  }
+
+  void _copyPassword() {
+    final password = _passwordController.text.trim();
+    if (password.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: password));
+      SnackBarHelper.info(context, 'Password copied to clipboard');
     }
   }
 }

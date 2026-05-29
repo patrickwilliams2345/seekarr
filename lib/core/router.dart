@@ -34,6 +34,9 @@ import 'package:seekarr/features/import/presentation/manual_import_progress_scre
 import 'package:seekarr/features/import/presentation/manual_import_routes.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_screen.dart';
+import 'package:seekarr/features/qbittorrent/presentation/torrent_detail_screen.dart';
+import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -309,6 +312,35 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
   );
 }
 
+GoRoute _qbittorrentRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+      key: state.pageKey,
+      child: ServiceDashboardScreen(
+        service: ServiceKey.qbittorrent,
+        trailingAction: const AddTorrentButton(),
+        child: const QbittorrentScreen(
+          showAppBar: false,
+          topPadding: _serviceDashboardTopPadding,
+        ),
+      ),
+    ),
+    routes: [
+      GoRoute(
+        path: 'torrent/:hash',
+        pageBuilder: (context, state) {
+          final hash = state.pathParameters['hash'] ?? '';
+          return RouteUtils.cupertinoPage(
+            key: state.pageKey,
+            child: TorrentDetailScreen(hash: hash),
+          );
+        },
+      ),
+    ],
+  );
+}
+
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
   if (path == '/discover') return '/services';
@@ -383,6 +415,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               _moviesRoutes(path: 'radarr'),
               _seriesRoutes(path: 'sonarr'),
               _musicRoutes(path: 'lidarr'),
+              _qbittorrentRoutes(path: 'qbittorrent'),
             ],
           ),
           GoRoute(

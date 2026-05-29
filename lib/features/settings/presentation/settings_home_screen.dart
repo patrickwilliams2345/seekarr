@@ -106,10 +106,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     SettingsModel settings,
   ) {
     final configured = ServiceKey.values
-        .where(
-          (s) =>
-              settings.urlFor(s).isNotEmpty && settings.apiKeyFor(s).isNotEmpty,
-        )
+        .where((s) => settings.isServiceConfigured(s))
         .toList();
 
     if (configured.isEmpty) return [];

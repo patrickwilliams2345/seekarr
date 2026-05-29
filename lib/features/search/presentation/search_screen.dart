@@ -113,7 +113,7 @@ class _ServiceFilterChips extends StatelessWidget {
             selected: selectedService == null,
             onTap: () => onSelected(null),
           ),
-          for (final service in ServiceKey.values)
+          for (final service in ServiceKey.values.where((s) => s.isSearchable))
             _FilterChip(
               label: service.title,
               color: service.accent,

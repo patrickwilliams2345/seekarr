@@ -11,6 +11,8 @@ import 'package:seekarr/features/music/data/lidarr_service.dart';
 import 'package:seekarr/features/music/presentation/music_provider.dart';
 import 'package:seekarr/features/series/data/sonarr_service.dart';
 import 'package:seekarr/features/series/presentation/series_provider.dart';
+import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/services/domain/service_summary.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -37,7 +39,7 @@ Future<ServiceSummary> _loadServiceSummary(
   SettingsModel settings,
 ) async {
   final host = service.extractHost(settings.urlFor(service)) ?? '';
-  if (settings.urlFor(service).isEmpty || settings.apiKeyFor(service).isEmpty) {
+  if (!settings.isServiceConfigured(service)) {
     return _offlineSummary(service, host: host);
   }
 
@@ -76,6 +78,28 @@ Future<String?> _loadVersion(
   SettingsModel settings,
   ServiceKey service,
 ) async {
+  if (service == ServiceKey.qbittorrent) {
+    final client = QbittorrentClient(
+      url: settings.qbittorrentUrl,
+      username: settings.qbittorrentUsername.isNotEmpty
+          ? settings.qbittorrentUsername
+          : null,
+      password: settings.qbittorrentPassword.isNotEmpty
+          ? settings.qbittorrentPassword
+          : null,
+    );
+    try {
+      final version = await client.getVersion().timeout(
+        const Duration(seconds: 5),
+      );
+      client.close();
+      return version.isNotEmpty ? version : null;
+    } catch (_) {
+      client.close();
+      return null;
+    }
+  }
+
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final client = createClient(
     baseUrl: settings.urlFor(service),
@@ -105,6 +129,8 @@ String _statusEndpointFor(ServiceKey service) {
       return '/api/v3/system/status';
     case ServiceKey.lidarr:
       return '/api/v1/system/status';
+    case ServiceKey.qbittorrent:
+      return '/api/v2/app/version';
   }
 }
 
@@ -118,6 +144,8 @@ Future<int> _loadItemCount(Ref ref, ServiceKey service) async {
       return (await ref.watch(sonarrServiceProvider).getSeries()).length;
     case ServiceKey.lidarr:
       return (await ref.watch(lidarrServiceProvider).getArtists()).length;
+    case ServiceKey.qbittorrent:
+      return (await ref.watch(qbittorrentServiceProvider).getTorrents()).length;
   }
 }
 
@@ -266,7 +294,9 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
     final items = switch (service) {
       ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
       ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
-      ServiceKey.seerr || ServiceKey.lidarr => const <dynamic>[],
+      ServiceKey.seerr ||
+      ServiceKey.lidarr ||
+      ServiceKey.qbittorrent => const <dynamic>[],
     };
     return items
         .whereType<Map>()
@@ -305,7 +335,7 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.radarr => 'Movie',
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
-    ServiceKey.seerr => service.title,
+    ServiceKey.seerr || ServiceKey.qbittorrent => service.title,
   };
 }
 

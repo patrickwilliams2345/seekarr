@@ -148,7 +148,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       ServiceKey.radarr => 'Assign movie identity',
       ServiceKey.sonarr => 'Assign episode identity',
       ServiceKey.lidarr => 'Assign music identity',
-      ServiceKey.seerr => 'Assign identity',
+      _ => 'Assign identity',
     };
     final subtitle = widget.isBulk
         ? '$bulkCount unmatched files'
@@ -319,7 +319,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       ServiceKey.sonarr => const ['Series', 'Season', 'Episode'],
       ServiceKey.lidarr => const ['Artist', 'Album', 'Track'],
       ServiceKey.radarr => const ['Movie'],
-      ServiceKey.seerr => const ['Match'],
+      _ => const ['Match'],
     };
   }
 
@@ -327,7 +327,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
     return switch (widget.service) {
       ServiceKey.radarr => true,
       ServiceKey.sonarr || ServiceKey.lidarr => _step == 2,
-      ServiceKey.seerr => true,
+      _ => true,
     };
   }
 
@@ -337,7 +337,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
         (_step == 0 && _match != null) || (_step == 1 && _seasonNumber != null),
       ServiceKey.lidarr =>
         (_step == 0 && _match != null) || (_step == 1 && _album != null),
-      ServiceKey.radarr || ServiceKey.seerr => false,
+      _ => false,
     };
   }
 
@@ -358,7 +358,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
                     (item) => _trackAssignments.containsKey(item.path),
                   )
                 : _trackAssignments.containsKey(widget.item?.path)),
-      ServiceKey.seerr => false,
+      _ => false,
     };
   }
 

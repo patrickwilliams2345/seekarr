@@ -310,5 +310,14 @@ Future<ServiceSummary> _summaryBuilder(Ref ref, ServiceKey service) async {
         itemCount: null,
         itemLabel: 'artists',
       );
+    case ServiceKey.qbittorrent:
+      return const ServiceSummary(
+        service: ServiceKey.qbittorrent,
+        status: ServiceSummaryStatus.offline,
+        host: '',
+        version: null,
+        itemCount: null,
+        itemLabel: 'torrents',
+      );
   }
 }

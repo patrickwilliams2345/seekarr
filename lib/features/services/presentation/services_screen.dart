@@ -29,7 +29,7 @@ class ServicesScreen extends ConsumerWidget {
 
     final settings = ref.watch(currentSettingsProvider);
     final allUnconfigured = ServiceKey.values.every(
-      (s) => settings.urlFor(s).isEmpty || settings.apiKeyFor(s).isEmpty,
+      (s) => !settings.isServiceConfigured(s),
     );
 
     return Scaffold(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
@@ -23,6 +24,8 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v3/system/status';
     case ServiceKey.lidarr:
       return '/api/v1/system/status';
+    case ServiceKey.qbittorrent:
+      return '/api/v2/app/version';
   }
 }
 
@@ -36,11 +39,29 @@ Future<ServiceConnectionStatus> _checkService(
   ServiceKey service,
   SettingsModel settings,
 ) async {
-  final url = settings.urlFor(service);
-  final apiKey = settings.apiKeyFor(service);
-  if (url.isEmpty || apiKey.isEmpty) {
+  if (!settings.isServiceConfigured(service)) {
     return ServiceConnectionStatus.notConfigured;
   }
+
+  if (service == ServiceKey.qbittorrent) {
+    final client = QbittorrentClient(
+      url: settings.qbittorrentUrl,
+      username: settings.qbittorrentUsername,
+      password: settings.qbittorrentPassword,
+    );
+    try {
+      await client.authenticate().timeout(const Duration(seconds: 5));
+      await client.getVersion().timeout(const Duration(seconds: 5));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
+
+  final url = settings.urlFor(service);
+  final apiKey = settings.apiKeyFor(service);
 
   final client = ApiClient(baseUrl: url, apiKey: apiKey);
   try {

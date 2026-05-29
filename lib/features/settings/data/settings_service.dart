@@ -75,6 +75,12 @@ class SettingsService {
       legacyApiKey: 'lidarr_api_key',
       secureApiKey: 'secure_lidarr_api_key',
     ),
+    ServiceKey.qbittorrent: _ServiceStorageKeys(
+      url: 'qbittorrent_url',
+      legacyApiKey: '',
+      secureApiKey: 'secure_qbittorrent_password',
+      username: 'qbittorrent_username',
+    ),
   };
 
   final SharedPreferences _prefs;
@@ -139,6 +145,14 @@ class SettingsService {
 
   Future<SettingsModel> loadSettings() async {
     final serviceSettings = await _loadServiceSettings();
+    final qbUsername =
+        _prefs.getString(
+          _serviceStorageKeys[ServiceKey.qbittorrent]!.username!,
+        ) ??
+        '';
+    final qbPassword = await _loadApiKey(
+      _serviceStorageKeys[ServiceKey.qbittorrent]!.secureApiKey,
+    );
 
     return SettingsModel(
       seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
@@ -149,6 +163,9 @@ class SettingsService {
       sonarrApiKey: serviceSettings[ServiceKey.sonarr]!.$2,
       lidarrUrl: serviceSettings[ServiceKey.lidarr]!.$1,
       lidarrApiKey: serviceSettings[ServiceKey.lidarr]!.$2,
+      qbittorrentUrl: serviceSettings[ServiceKey.qbittorrent]!.$1,
+      qbittorrentUsername: qbUsername,
+      qbittorrentPassword: qbPassword,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );
@@ -163,6 +180,13 @@ class SettingsService {
     await _prefs.remove('hidden_tabs');
 
     await _saveServiceApiKeys(settings);
+
+    final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
+    if (settings.qbittorrentUsername.isNotEmpty) {
+      await _prefs.setString(qbKeys.username!, settings.qbittorrentUsername);
+    } else {
+      await _prefs.remove(qbKeys.username!);
+    }
   }
 
   Future<Map<ServiceKey, (String, String)>> _loadServiceSettings() async {
@@ -204,6 +228,13 @@ class SettingsService {
   Future<void> _saveServiceApiKeys(SettingsModel settings) async {
     for (final service in ServiceKey.values) {
       final storageKeys = _serviceStorageKeys[service]!;
+      if (service == ServiceKey.qbittorrent) {
+        await _saveApiKey(
+          storageKeys.secureApiKey,
+          settings.qbittorrentPassword,
+        );
+        continue;
+      }
       await _saveApiKey(storageKeys.secureApiKey, settings.apiKeyFor(service));
 
       // Remove legacy secure API key after writing to the new key.
@@ -254,6 +285,9 @@ class _ServiceStorageKeys {
   /// Legacy secure API key from before the rename.
   final String? legacySecureApiKey;
 
+  /// Prefs key for the username (used by qBittorrent).
+  final String? username;
+
   const _ServiceStorageKeys({
     required this.url,
     required this.legacyApiKey,
@@ -261,5 +295,6 @@ class _ServiceStorageKeys {
     this.legacyUrl,
     this.legacyPlaintextApiKey,
     this.legacySecureApiKey,
+    this.username,
   });
 }

@@ -30,6 +30,7 @@ class AppColors {
   static const Color radarr = Color(0xFFF59E0B);
   static const Color sonarr = Color(0xFF8B5CF6);
   static const Color lidarr = Color(0xFFEC4899);
+  static const Color qbittorrent = Color(0xFF2F67BA);
 
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;

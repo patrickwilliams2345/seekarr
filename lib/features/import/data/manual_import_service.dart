@@ -8,8 +8,8 @@ import 'package:seekarr/features/settings/domain/service_key.dart';
 
 final manualImportServiceProvider =
     Provider.family<ManualImportService, ServiceKey>((ref, service) {
-      if (service == ServiceKey.seerr) {
-        throw Exception('Seerr does not support manual import');
+      if (!service.supportsManualImport) {
+        throw Exception('${service.title} does not support manual import');
       }
 
       final settings = ref.watch(currentSettingsProvider);
@@ -192,7 +192,7 @@ class ManualImportService {
       ServiceKey.radarr => 'movie/lookup',
       ServiceKey.sonarr => 'series/lookup',
       ServiceKey.lidarr => 'artist/lookup',
-      ServiceKey.seerr => throw ArgumentError('Seerr does not support lookup'),
+      _ => throw ArgumentError('${service.title} does not support lookup'),
     };
   }
 
@@ -201,7 +201,7 @@ class ManualImportService {
       ServiceKey.radarr => 'movie',
       ServiceKey.sonarr => 'series',
       ServiceKey.lidarr => 'artist',
-      ServiceKey.seerr => throw ArgumentError('Seerr does not support lookup'),
+      _ => throw ArgumentError('${service.title} does not support lookup'),
     };
   }
 }

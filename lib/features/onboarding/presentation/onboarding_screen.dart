@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -24,6 +25,7 @@ const _serviceColors = {
   ServiceKey.radarr: Color(0xFFF59E0B), // amber
   ServiceKey.sonarr: Color(0xFF8B5CF6), // purple
   ServiceKey.lidarr: Color(0xFFEC4899), // pink
+  ServiceKey.qbittorrent: Color(0xFF2F67BA), // blue
 };
 
 // ─── Health-check helper (mirrors serviceConnectionProvider logic) ──────────
@@ -36,6 +38,8 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v3/system/status';
     case ServiceKey.lidarr:
       return '/api/v1/system/status';
+    case ServiceKey.qbittorrent:
+      return '/api/v2/app/version';
   }
 }
 
@@ -44,6 +48,23 @@ Future<ServiceConnectionStatus> _verifyService(
   String url,
   String apiKey,
 ) async {
+  if (!service.usesApiKey) {
+    final urlTrimmed = url.trim();
+    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    final client = QbittorrentClient(
+      url: urlTrimmed,
+      username: '',
+      password: '',
+    );
+    try {
+      await client.getVersion().timeout(const Duration(seconds: 5));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
   if (url.trim().isEmpty || apiKey.trim().isEmpty) {
     return ServiceConnectionStatus.notConfigured;
   }
@@ -101,10 +122,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  bool _isServiceReady(ServiceKey k) =>
-      _enabled[k]! &&
-      _urlCtrl[k]!.text.trim().isNotEmpty &&
-      _apiKeyCtrl[k]!.text.trim().isNotEmpty;
+  bool _isServiceReady(ServiceKey k) {
+    if (!_enabled[k]!) return false;
+    if (_urlCtrl[k]!.text.trim().isEmpty) return false;
+    if (!k.usesApiKey) return true;
+    return _apiKeyCtrl[k]!.text.trim().isNotEmpty;
+  }
 
   List<ServiceKey> get _configuredServices =>
       ServiceKey.values.where(_isServiceReady).toList();
@@ -123,20 +146,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
   }
 
-  /// Persists only the enabled+filled services, then moves to step 3.
   Future<void> _saveAndContinue() async {
     final current = ref.read(currentSettingsProvider);
     var updated = current;
     for (final k in ServiceKey.values) {
       if (_isServiceReady(k)) {
-        updated = updated.copyWithService(
-          k,
-          url: _urlCtrl[k]!.text.trim(),
-          apiKey: _apiKeyCtrl[k]!.text.trim(),
-        );
+        if (k == ServiceKey.qbittorrent) {
+          updated = updated.copyWithQbittorrent(url: _urlCtrl[k]!.text.trim());
+        } else {
+          updated = updated.copyWithService(
+            k,
+            url: _urlCtrl[k]!.text.trim(),
+            apiKey: _apiKeyCtrl[k]!.text.trim(),
+          );
+        }
       } else {
-        // Clear any previously saved credentials for disabled services
-        updated = updated.copyWithService(k, url: '', apiKey: '');
+        if (k == ServiceKey.qbittorrent) {
+          updated = updated.copyWithQbittorrent(
+            url: '',
+            username: '',
+            password: '',
+          );
+        } else {
+          updated = updated.copyWithService(k, url: '', apiKey: '');
+        }
       }
     }
     await ref.read(settingsProvider.notifier).updateSettings(updated);
@@ -770,12 +803,38 @@ class _ServiceConfig extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _ConfigField(label: 'Base URL', controller: urlCtrl, isUrl: true),
-              const SizedBox(height: 10),
-              _ConfigField(
-                label: 'API key',
-                controller: apiKeyCtrl,
-                isPassword: true,
-              ),
+              if (serviceKey.usesApiKey) ...[
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'API key',
+                  controller: apiKeyCtrl,
+                  isPassword: true,
+                ),
+              ] else ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Credentials are optional for qBittorrent. Leave them empty if your instance does not require authentication.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: _muted,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (serviceKey == ServiceKey.qbittorrent &&
+                  verifyStatus == ServiceConnectionStatus.disconnected) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'If your instance requires authentication, configure username and password in Settings → Services → qBittorrent after setup.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Color(0xFFFCA5A5),
+                    height: 1.5,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               // Verify row
               Row(

@@ -500,7 +500,7 @@ ManualImportFixAssignment _assignmentForItem(
     ServiceKey.radarr => item.movie ?? const <String, dynamic>{},
     ServiceKey.sonarr => item.series ?? const <String, dynamic>{},
     ServiceKey.lidarr => item.artist ?? const <String, dynamic>{},
-    ServiceKey.seerr => const <String, dynamic>{},
+    _ => const <String, dynamic>{},
   };
   final episodes = service == ServiceKey.sonarr
       ? item.episodes
