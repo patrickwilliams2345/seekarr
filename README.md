@@ -36,31 +36,34 @@ If you find Seekarr useful, consider supporting me with a donation — it helps 
 
 ### Services
 <p align="center">
-  <img src="screenshots/discover.PNG" width="300" alt="Discover screen" />
-  <img src="screenshots/movies.PNG" width="300" alt="Movies screen" />
-  <img src="screenshots/series.PNG" width="300" alt="Series screen" />
+  <img src="screenshots/services.png" width="300" alt="Services screen" />
+  <img src="screenshots/services_dark.png" width="300" alt="Services dark screen" />
+  <img src="screenshots/services_list.png" width="300" alt="Services list screen" />
+  <img src="screenshots/seerr.png" width="300" alt="Seerr screen" />
+  <img src="screenshots/sonarr.png" width="300" alt="Sonarr screen" />
+  <img src="screenshots/sonarr_dark.png" width="300" alt="Sonarr dark screen" />
+  <img src="screenshots/qbit.png" width="300" alt="qbittorrent screen" />
 </p>
 
 ### Media Details
 <p align="center">
-  <img src="screenshots/discover_details.PNG" width="300" alt="Discover details screen" />
-  <img src="screenshots/discover_details2.PNG" width="300" alt="Discover details screen 2" />
-  <img src="screenshots/movies_details.PNG" width="300" alt="Movies details screen" />
+  <img src="screenshots/seerr_media_detail.png" width="300" alt="Seerr details screen" />
+  <img src="screenshots/radarr_media_detail.png" width="300" alt="radarr details screen 2" />
 </p>
 
 ### Activity Management
 <p align="center">
-  <img src="screenshots/series_activity.PNG" width="300" alt="Activity screen" />
-  <img src="screenshots/series_wanted.PNG" width="300" alt="Wanted screen" />
+  <img src="screenshots/activity.png" width="300" alt="Activity screen" />
+  <img src="screenshots/history.png" width="300" alt="History screen" />
 </p>
 
-### Settings & Dark Mode
+### Search, Import & Settings
 <p align="center">
-  <img src="screenshots/settings_dark.PNG" width="300" alt="Settings screen" />
-  <img src="screenshots/appearance_setting.PNG" width="300" alt="Appearance screen" />
-  <img src="screenshots/service_settings_dark.PNG" width="300" alt="Service settings dark screen" />
-  <img src="screenshots/discover_dark.PNG" width="300" alt="Discover dark screen" />
-  <img src="screenshots/discover_details_dark.PNG" width="300" alt="Discover details dark screen" />
+  <img src="screenshots/search.png" width="300" alt="search screen" />
+  <img src="screenshots/search_dark.png" width="300" alt="search dark screen" />
+  <img src="screenshots/manual_import.png" width="300" alt="manual import screen" />
+  <img src="screenshots/manual_import_dark.png" width="300" alt="manual import dark screen" />
+  <img src="screenshots/settings.png" width="300" alt="settings screen" />
 </p>
 
 ---
