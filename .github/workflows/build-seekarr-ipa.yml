@@ -24,6 +24,11 @@ jobs:
           repository: matthw-labs/seekarr
           ref: ${{ steps.latest.outputs.tag }}
 
+      - name: Patch missing iOS app icon set
+        run: |
+          cp -R ios/Runner/Assets.xcassets/AppIcon.appiconset \
+            ios/Runner/Assets.xcassets/seekarr_icon.appiconset
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
