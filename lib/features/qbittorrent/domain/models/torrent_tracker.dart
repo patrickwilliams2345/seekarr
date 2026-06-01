@@ -2,7 +2,7 @@ import 'parse_utils.dart';
 
 class TorrentTracker {
   final String url;
-  final String status;
+  final int status;
   final int tier;
   final int numPeers;
   final int numSeeds;
@@ -24,28 +24,30 @@ class TorrentTracker {
   factory TorrentTracker.fromJson(Map<String, dynamic> json) {
     return TorrentTracker(
       url: json['url'] as String? ?? '',
-      status: json['status'] as String? ?? '',
+      status: parseInt(json['status']),
       tier: parseInt(json['tier']),
       numPeers: parseInt(json['num_peers']),
       numSeeds: parseInt(json['num_seeds']),
       numLeeches: parseInt(json['num_leeches']),
       numDownloaded: parseInt(json['num_downloaded']),
-      msg: json['msg'] as String? ?? '',
+      msg: json['msg'].toString(),
     );
   }
 
   String get statusLabel {
     switch (status) {
-      case 'Working':
+      case 0:
+        return 'Disabled';
+      case 1:
+        return 'Not contacted';
+      case 2:
         return 'Working';
-      case 'Updating':
+      case 3:
         return 'Updating';
-      case 'Not working':
+      case 4:
         return 'Not working';
-      case 'Not contacted yet':
-        return 'Not contacted yet';
       default:
-        return status;
+        return 'Unknown';
     }
   }
 }

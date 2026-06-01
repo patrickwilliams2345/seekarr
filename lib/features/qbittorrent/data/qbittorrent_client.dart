@@ -125,9 +125,7 @@ class QbittorrentClient {
       queryParameters: queryParameters,
       data: data,
       options: Options(
-        contentType: data != null
-            ? Headers.formUrlEncodedContentType
-            : Headers.jsonContentType,
+        contentType: Headers.formUrlEncodedContentType,
       ),
     );
   }

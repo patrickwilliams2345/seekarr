@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
@@ -29,29 +31,112 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
 
 enum TorrentFilter { all, downloading, seeding, paused, queued }
 
+enum TorrentSort {
+  name,
+  size,
+  progress,
+  dlSpeed,
+  upSpeed,
+  eta,
+  addedOn,
+  state;
+
+  String get apiValue {
+    switch (this) {
+      case TorrentSort.name:
+        return 'name';
+      case TorrentSort.size:
+        return 'size';
+      case TorrentSort.progress:
+        return 'progress';
+      case TorrentSort.dlSpeed:
+        return 'dlspeed';
+      case TorrentSort.upSpeed:
+        return 'upspeed';
+      case TorrentSort.eta:
+        return 'eta';
+      case TorrentSort.addedOn:
+        return 'added_on';
+      case TorrentSort.state:
+        return 'state';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case TorrentSort.name:
+        return 'Name';
+      case TorrentSort.size:
+        return 'Size';
+      case TorrentSort.progress:
+        return 'Progress';
+      case TorrentSort.dlSpeed:
+        return '↓ Speed';
+      case TorrentSort.upSpeed:
+        return '↑ Speed';
+      case TorrentSort.eta:
+        return 'ETA';
+      case TorrentSort.addedOn:
+        return 'Added';
+      case TorrentSort.state:
+        return 'State';
+    }
+  }
+}
+
 final torrentFilterProvider = StateProvider<TorrentFilter>(
   (ref) => TorrentFilter.all,
 );
 
-final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
+final torrentSortProvider = StateProvider<TorrentSort>(
+  (ref) => TorrentSort.addedOn,
+);
+
+final torrentSortReverseProvider = StateProvider<bool>((ref) => true);
+
+final torrentTrackerFilterProvider = StateProvider<String?>((ref) => null);
+
+final availableTrackersProvider = Provider<List<String>>((ref) {
+  final torrents = ref.watch(torrentsProvider).asData?.value;
+  if (torrents == null) return [];
+  final trackers = <String>{};
+  for (final t in torrents) {
+    if (t.trackerDomain.isNotEmpty) trackers.add(t.trackerDomain);
+  }
+  return trackers.toList()..sort();
+});
+
+  final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final filter = ref.watch(torrentFilterProvider);
+  final sort = ref.watch(torrentSortProvider);
+  final reverse = ref.watch(torrentSortReverseProvider);
+  final trackerFilter = ref.watch(torrentTrackerFilterProvider);
 
-  String? apiFilter;
-  switch (filter) {
-    case TorrentFilter.downloading:
-      apiFilter = 'downloading';
-    case TorrentFilter.seeding:
-      apiFilter = 'seeding';
-    case TorrentFilter.paused:
-      apiFilter = 'paused';
-    case TorrentFilter.queued:
-      apiFilter = 'all';
-    case TorrentFilter.all:
-      apiFilter = 'all';
+  final apiFilter = switch (filter) {
+    TorrentFilter.downloading => 'downloading',
+    TorrentFilter.seeding => 'seeding',
+    TorrentFilter.paused => 'paused',
+    _ => 'all',
+  };
+
+  var torrents = await service.getTorrents(
+    filter: apiFilter,
+    sort: sort.apiValue,
+    reverse: reverse,
+  );
+
+  if (filter == TorrentFilter.queued) {
+    torrents = torrents.where((t) => t.parsedState.isQueued).toList();
   }
 
-  return service.getTorrents(filter: apiFilter);
+  if (trackerFilter != null) {
+    torrents = torrents
+        .where((t) => t.trackerDomain == trackerFilter)
+        .toList();
+  }
+
+  return torrents;
 });
 
 final qbittorrentTorrentsProvider =
@@ -80,3 +165,15 @@ final transferInfoProvider = FutureProvider<TransferInfo>((ref) async {
 });
 
 final selectedTorrentHashesProvider = StateProvider<Set<String>>((ref) => {});
+
+final torrentPollingEnabledProvider = StateProvider<bool>((ref) => true);
+
+final torrentPollingProvider = Provider.autoDispose<void>((ref) {
+  final enabled = ref.watch(torrentPollingEnabledProvider);
+  if (!enabled) return;
+  final timer = Timer.periodic(const Duration(seconds: 3), (_) {
+    ref.invalidate(torrentsProvider);
+    ref.invalidate(transferInfoProvider);
+  });
+  ref.onDispose(() => timer.cancel());
+});

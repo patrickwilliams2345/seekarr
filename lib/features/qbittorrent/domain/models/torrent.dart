@@ -2,30 +2,44 @@ import 'parse_utils.dart';
 
 enum TorrentState {
   downloading,
+  metaDownloading,
   seeding,
+  stalled,
+  checking,
   paused,
   queuedUp,
   queuedDl,
+  error,
   unknown;
 
   String get label {
     switch (this) {
       case TorrentState.downloading:
         return 'DL';
+      case TorrentState.metaDownloading:
+        return 'META';
       case TorrentState.seeding:
         return 'SEED';
+      case TorrentState.stalled:
+        return 'STALLED';
+      case TorrentState.checking:
+        return 'CHECK';
       case TorrentState.paused:
         return 'PAUSE';
       case TorrentState.queuedUp:
       case TorrentState.queuedDl:
         return 'QUEUE';
+      case TorrentState.error:
+        return 'ERR';
       case TorrentState.unknown:
         return '—';
     }
   }
 
   bool get isActive =>
-      this == TorrentState.downloading || this == TorrentState.seeding;
+      this == TorrentState.downloading ||
+      this == TorrentState.metaDownloading ||
+      this == TorrentState.seeding;
 
   bool get isPaused => this == TorrentState.paused;
 
@@ -34,13 +48,17 @@ enum TorrentState {
 
   static TorrentState fromString(String? state) {
     return switch (state) {
-      'downloading' => TorrentState.downloading,
+      'downloading' || 'forcedDL' => TorrentState.downloading,
+      'metaDL' => TorrentState.metaDownloading,
       'uploading' || 'forcedUP' => TorrentState.seeding,
       'stalledUP' => TorrentState.seeding,
+      'stalledDL' => TorrentState.stalled,
+      'checkingUP' || 'checkingDL' => TorrentState.checking,
       'pausedUP' || 'pausedDL' => TorrentState.paused,
       'queuedUP' => TorrentState.queuedUp,
       'queuedDL' => TorrentState.queuedDl,
-      'moving' || 'allocating' || 'metaDL' => TorrentState.downloading,
+      'moving' || 'allocating' => TorrentState.downloading,
+      'error' || 'missingFiles' => TorrentState.error,
       _ => TorrentState.unknown,
     };
   }
@@ -57,6 +75,7 @@ class Torrent {
   final int upSpeed;
   final int eta;
   final String category;
+  final String tracker;
   final List<String> tags;
   final double ratio;
   final int addedOn;
@@ -75,6 +94,7 @@ class Torrent {
     required this.upSpeed,
     required this.eta,
     required this.category,
+    required this.tracker,
     required this.tags,
     required this.ratio,
     required this.addedOn,
@@ -95,6 +115,7 @@ class Torrent {
       upSpeed: parseInt(json['upspeed']),
       eta: parseInt(json['eta']),
       category: json['category'] as String? ?? '',
+      tracker: json['tracker'] as String? ?? '',
       tags: _parseTags(json['tags']),
       ratio: parseDouble(json['ratio']),
       addedOn: parseInt(json['added_on']),
@@ -141,4 +162,15 @@ class Torrent {
   }
 
   String get progressFormatted => '${(progress * 100).toStringAsFixed(1)}%';
+
+  String get trackerDomain {
+    if (tracker.isEmpty) return '';
+    try {
+      final uri = Uri.parse(tracker);
+      final host = uri.host;
+      return host.startsWith('www.') ? host.substring(4) : host;
+    } catch (_) {
+      return '';
+    }
+  }
 }

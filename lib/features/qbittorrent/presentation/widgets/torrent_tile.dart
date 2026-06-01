@@ -106,7 +106,8 @@ class TorrentTile extends StatelessWidget {
                 ),
                 if (torrent.progress < 1 &&
                     state != TorrentState.queuedDl &&
-                    state != TorrentState.queuedUp) ...[
+                    state != TorrentState.queuedUp &&
+                    state != TorrentState.error) ...[
                   const SizedBox(height: 7),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
@@ -123,35 +124,33 @@ class TorrentTile extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (isActive) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      if (torrent.dlSpeed > 0) ...[
-                        _SpeedLabel(
-                          speed: torrent.dlSpeedFormatted,
-                          color: AppColors.qbittorrent,
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      if (torrent.upSpeed > 0) ...[
-                        _SpeedLabel(
-                          speed: torrent.upSpeedFormatted,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ],
-                      const Spacer(),
-                      Text(
-                        torrent.progressFormatted,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                          fontSize: 10,
-                        ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (isActive && torrent.dlSpeed > 0) ...[
+                      _SpeedLabel(
+                        speed: torrent.dlSpeedFormatted,
+                        color: AppColors.qbittorrent,
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    if (isActive && torrent.upSpeed > 0) ...[
+                      _SpeedLabel(
+                        speed: torrent.upSpeedFormatted,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ],
-                  ),
-                ],
+                    const Spacer(),
+                    Text(
+                      torrent.progressFormatted,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -191,11 +190,29 @@ class TorrentTile extends StatelessWidget {
           'DL',
           AppColors.qbittorrent,
         );
+      case TorrentState.metaDownloading:
+        return (
+          AppColors.qbittorrent.withValues(alpha: 0.09),
+          'META',
+          AppColors.qbittorrent,
+        );
       case TorrentState.seeding:
         return (
           AppColors.success.withValues(alpha: 0.09),
           'SEED',
           AppColors.success,
+        );
+      case TorrentState.stalled:
+        return (
+          AppColors.warning.withValues(alpha: 0.12),
+          'STALLED',
+          AppColors.warning,
+        );
+      case TorrentState.checking:
+        return (
+          AppColors.qbittorrent.withValues(alpha: 0.09),
+          'CHECK',
+          AppColors.qbittorrent,
         );
       case TorrentState.paused:
         return (
@@ -209,6 +226,12 @@ class TorrentTile extends StatelessWidget {
           const Color(0xFF9CA3AF).withValues(alpha: 0.12),
           'QUEUE',
           const Color(0xFF9CA3AF),
+        );
+      case TorrentState.error:
+        return (
+          const Color(0xFFEF4444).withValues(alpha: 0.12),
+          'ERR',
+          const Color(0xFFEF4444),
         );
       case TorrentState.unknown:
         return (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/core/utils/sheet_utils.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
 class AddTorrentButton extends ConsumerWidget {
@@ -22,17 +23,16 @@ class AddTorrentButton extends ConsumerWidget {
     final savePathController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    showModalBottomSheet(
+    SheetUtils.showSeekarrModalSheet<void>(
       context: context,
-      isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
+        builder: (ctx2, setModalState) {
           return Padding(
             padding: EdgeInsets.only(
               left: 20,
               right: 20,
               top: 20,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              bottom: MediaQuery.of(ctx2).viewInsets.bottom + 20,
             ),
             child: Form(
               key: formKey,
@@ -42,7 +42,7 @@ class AddTorrentButton extends ConsumerWidget {
                 children: [
                   Text(
                     'Add Torrent',
-                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(ctx2).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -90,7 +90,7 @@ class AddTorrentButton extends ConsumerWidget {
                               : savePathController.text.trim(),
                         );
                         ref.invalidate(torrentsProvider);
-                        Navigator.of(ctx).pop();
+                        Navigator.of(ctx2).pop();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -99,7 +99,7 @@ class AddTorrentButton extends ConsumerWidget {
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
+                        ScaffoldMessenger.of(ctx2).showSnackBar(
                           SnackBar(content: Text('Failed to add torrent: $e')),
                         );
                       }

@@ -320,16 +320,16 @@ class _TrackerRow extends StatelessWidget {
 }
 
 class _StatusDot extends StatelessWidget {
-  final String status;
+  final int status;
 
   const _StatusDot({required this.status});
 
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      'Working' => AppColors.success,
-      'Updating' => AppColors.warning,
-      'Not working' => Theme.of(context).colorScheme.error,
+      2 => AppColors.success,
+      3 => AppColors.warning,
+      4 => Theme.of(context).colorScheme.error,
       _ => Theme.of(context).colorScheme.onSurfaceVariant,
     };
 
@@ -372,6 +372,33 @@ class _ActionsTab extends ConsumerWidget {
           },
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
           label: const Text('Resume'),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.qbittorrent,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () async {
+            final service = ref.read(qbittorrentServiceProvider);
+            try {
+              await service.setForceStart([torrent.hash], true);
+              ref.invalidate(torrentsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Force started')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed: $e')),
+                );
+              }
+            }
+          },
+          icon: const Icon(Icons.flash_on_rounded, size: 18),
+          label: const Text('Force Resume'),
         ),
         const SizedBox(height: 8),
         FilledButton.icon(

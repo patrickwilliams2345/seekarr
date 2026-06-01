@@ -92,14 +92,14 @@ class QbittorrentService {
   Future<void> pauseTorrents(List<String> hashes) async {
     await _client.post(
       '/api/v2/torrents/pause',
-      queryParameters: {'hashes': hashes.join('|')},
+      data: {'hashes': hashes.join('|')},
     );
   }
 
   Future<void> resumeTorrents(List<String> hashes) async {
     await _client.post(
       '/api/v2/torrents/resume',
-      queryParameters: {'hashes': hashes.join('|')},
+      data: {'hashes': hashes.join('|')},
     );
   }
 
@@ -109,7 +109,7 @@ class QbittorrentService {
   }) async {
     await _client.post(
       '/api/v2/torrents/delete',
-      queryParameters: {
+      data: {
         'hashes': hashes.join('|'),
         'deleteFiles': deleteFiles.toString(),
       },
@@ -131,21 +131,21 @@ class QbittorrentService {
   Future<void> setCategory(List<String> hashes, String category) async {
     await _client.post(
       '/api/v2/torrents/setCategory',
-      queryParameters: {'hashes': hashes.join('|'), 'category': category},
+      data: {'hashes': hashes.join('|'), 'category': category},
     );
   }
 
   Future<void> addTags(List<String> hashes, List<String> tags) async {
     await _client.post(
       '/api/v2/torrents/addTags',
-      queryParameters: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
+      data: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
     );
   }
 
   Future<void> removeTags(List<String> hashes, List<String> tags) async {
     await _client.post(
       '/api/v2/torrents/removeTags',
-      queryParameters: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
+      data: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
     );
   }
 
@@ -155,7 +155,7 @@ class QbittorrentService {
   ) async {
     await _client.post(
       '/api/v2/torrents/setDownloadLimit',
-      queryParameters: {
+      data: {
         'hashes': hashes.join('|'),
         'limit': limitBytesPerSecond,
       },
@@ -168,10 +168,17 @@ class QbittorrentService {
   ) async {
     await _client.post(
       '/api/v2/torrents/setUploadLimit',
-      queryParameters: {
+      data: {
         'hashes': hashes.join('|'),
         'limit': limitBytesPerSecond,
       },
+    );
+  }
+
+  Future<void> setForceStart(List<String> hashes, bool value) async {
+    await _client.post(
+      '/api/v2/torrents/setForceStart',
+      data: {'hashes': hashes.join('|'), 'value': value.toString()},
     );
   }
 

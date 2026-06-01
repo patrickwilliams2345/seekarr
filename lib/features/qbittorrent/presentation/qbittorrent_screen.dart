@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -45,7 +46,10 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(torrentPollingProvider);
     final selectedFilter = ref.watch(torrentFilterProvider);
+    final currentSort = ref.watch(torrentSortProvider);
+    final sortReverse = ref.watch(torrentSortReverseProvider);
     final torrentsAsync = ref.watch(torrentsProvider);
     final selectedHashes = ref.watch(selectedTorrentHashesProvider);
     final colorScheme = Theme.of(context).colorScheme;
@@ -57,6 +61,9 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
           if (widget.topPadding > 0) SizedBox(height: widget.topPadding),
           _buildStatsBar(ref),
           _buildFilterChips(selectedFilter, colorScheme, accent),
+          _buildTrackerChips(colorScheme, accent),
+          const SizedBox(height: 4),
+          _buildSortRow(currentSort, sortReverse, colorScheme),
           Expanded(
             child: _buildTorrentList(
               torrentsAsync,
@@ -118,6 +125,125 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     );
   }
 
+  Widget _buildTrackerChips(ColorScheme colorScheme, Color accent) {
+    final trackers = ref.watch(availableTrackersProvider);
+    final selectedTracker = ref.watch(torrentTrackerFilterProvider);
+
+    if (trackers.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Row(
+        children: [
+          for (final tracker in trackers) ...[
+            if (tracker != trackers.first) const SizedBox(width: 5),
+            _TrackerChip(
+              label: tracker,
+              active: tracker == selectedTracker,
+              accent: accent,
+              colorScheme: colorScheme,
+              onTap: () {
+                final notifier = ref.read(
+                  torrentTrackerFilterProvider.notifier,
+                );
+                notifier.state =
+                    tracker == selectedTracker ? null : tracker;
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSortRow(
+    TorrentSort currentSort,
+    bool reverse,
+    ColorScheme colorScheme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            'Sort:',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 10,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final sort in TorrentSort.values) ...[
+                    if (sort != TorrentSort.values.first)
+                      const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        if (sort == currentSort) {
+                          ref.read(torrentSortReverseProvider.notifier).state =
+                              !reverse;
+                        } else {
+                          ref.read(torrentSortProvider.notifier).state = sort;
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: sort == currentSort
+                              ? AppColors.qbittorrent.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              sort.label,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: sort == currentSort
+                                        ? AppColors.qbittorrent
+                                        : colorScheme.onSurfaceVariant,
+                                    fontSize: 10,
+                                    fontWeight: sort == currentSort
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                            ),
+                            if (sort == currentSort) ...[
+                              const SizedBox(width: 2),
+                              Icon(
+                                reverse
+                                    ? Icons.arrow_downward_rounded
+                                    : Icons.arrow_upward_rounded,
+                                size: 10,
+                                color: AppColors.qbittorrent,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTorrentList(
     AsyncValue<List<Torrent>> torrentsAsync,
     Set<String> selectedHashes,
@@ -165,6 +291,8 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                 onTap: () {
                   if (selectedHashes.isNotEmpty) {
                     _toggleSelection(ref, torrent.hash);
+                  } else {
+                    context.push('/services/qbittorrent/torrent/${torrent.hash}');
                   }
                 },
                 onLongPress: () {
@@ -236,6 +364,29 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                 },
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: const Text('Resume'),
+              ),
+              IconButton(
+                icon: Icon(Icons.flash_on_rounded, color: AppColors.qbittorrent),
+                tooltip: 'Force Resume',
+                onPressed: () async {
+                  final hashes = selectedHashes.toList();
+                  final service = ref.read(qbittorrentServiceProvider);
+                  try {
+                    await service.setForceStart(hashes, true);
+                    ref.invalidate(torrentsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Force started')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed: $e')),
+                      );
+                    }
+                  }
+                },
               ),
               IconButton(
                 icon: Icon(Icons.pause_rounded, color: AppColors.warning),
@@ -372,6 +523,47 @@ class _FilterChip extends StatelessWidget {
             color: active ? accent : colorScheme.onSurfaceVariant,
             fontSize: 11,
             fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackerChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color accent;
+  final ColorScheme colorScheme;
+  final VoidCallback onTap;
+
+  const _TrackerChip({
+    required this.label,
+    required this.active,
+    required this.accent,
+    required this.colorScheme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(
+          color: active ? accent.withValues(alpha: 0.12) : Colors.transparent,
+          border: Border.all(
+            color: active ? accent.withValues(alpha: 0.5) : colorScheme.outline,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? accent : colorScheme.onSurfaceVariant,
+            fontSize: 10,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
