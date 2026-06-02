@@ -1,8 +1,8 @@
 name: Build Seekarr IPA
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
