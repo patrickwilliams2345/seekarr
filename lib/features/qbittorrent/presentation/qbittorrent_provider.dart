@@ -94,7 +94,34 @@ final torrentSortProvider = StateProvider<TorrentSort>(
 
 final torrentSortReverseProvider = StateProvider<bool>((ref) => true);
 
+final torrentCategoryFilterProvider = StateProvider<String?>(
+  (ref) => null,
+);
+
+final torrentTagFilterProvider = StateProvider<String?>((ref) => null);
+
 final torrentTrackerFilterProvider = StateProvider<String?>((ref) => null);
+
+final availableCategoriesProvider = Provider<List<String>>((ref) {
+  final torrents = ref.watch(torrentsProvider).asData?.value;
+  if (torrents == null) return [];
+  return torrents
+      .where((t) => t.category.isNotEmpty)
+      .map((t) => t.category)
+      .toSet()
+      .toList()
+    ..sort();
+});
+
+final availableTagsProvider = Provider<List<String>>((ref) {
+  final torrents = ref.watch(torrentsProvider).asData?.value;
+  if (torrents == null) return [];
+  final tags = <String>{};
+  for (final t in torrents) {
+    tags.addAll(t.tags);
+  }
+  return tags.toList()..sort();
+});
 
 final availableTrackersProvider = Provider<List<String>>((ref) {
   final torrents = ref.watch(torrentsProvider).asData?.value;
@@ -106,11 +133,13 @@ final availableTrackersProvider = Provider<List<String>>((ref) {
   return trackers.toList()..sort();
 });
 
-  final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
+final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final filter = ref.watch(torrentFilterProvider);
   final sort = ref.watch(torrentSortProvider);
   final reverse = ref.watch(torrentSortReverseProvider);
+  final categoryFilter = ref.watch(torrentCategoryFilterProvider);
+  final tagFilter = ref.watch(torrentTagFilterProvider);
   final trackerFilter = ref.watch(torrentTrackerFilterProvider);
 
   final apiFilter = switch (filter) {
@@ -128,6 +157,14 @@ final availableTrackersProvider = Provider<List<String>>((ref) {
 
   if (filter == TorrentFilter.queued) {
     torrents = torrents.where((t) => t.parsedState.isQueued).toList();
+  }
+
+  if (categoryFilter != null && categoryFilter.isNotEmpty) {
+    torrents = torrents.where((t) => t.category == categoryFilter).toList();
+  }
+
+  if (tagFilter != null && tagFilter.isNotEmpty) {
+    torrents = torrents.where((t) => t.tags.contains(tagFilter)).toList();
   }
 
   if (trackerFilter != null) {

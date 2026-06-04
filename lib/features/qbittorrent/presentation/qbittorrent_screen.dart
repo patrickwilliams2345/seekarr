@@ -61,7 +61,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
           if (widget.topPadding > 0) SizedBox(height: widget.topPadding),
           _buildStatsBar(ref),
           _buildFilterChips(selectedFilter, colorScheme, accent),
-          _buildTrackerChips(colorScheme, accent),
+          _buildFilterRow(colorScheme, accent),
           const SizedBox(height: 4),
           _buildSortRow(currentSort, sortReverse, colorScheme),
           Expanded(
@@ -125,33 +125,84 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     );
   }
 
-  Widget _buildTrackerChips(ColorScheme colorScheme, Color accent) {
+  Widget _buildFilterRow(ColorScheme colorScheme, Color accent) {
+    final categories = ref.watch(availableCategoriesProvider);
+    final tags = ref.watch(availableTagsProvider);
     final trackers = ref.watch(availableTrackersProvider);
+    final selectedCategory = ref.watch(torrentCategoryFilterProvider);
+    final selectedTag = ref.watch(torrentTagFilterProvider);
     final selectedTracker = ref.watch(torrentTrackerFilterProvider);
 
-    if (trackers.isEmpty) return const SizedBox.shrink();
+    final hasAnyOptions =
+        categories.isNotEmpty || tags.isNotEmpty || trackers.isNotEmpty;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          for (final tracker in trackers) ...[
-            if (tracker != trackers.first) const SizedBox(width: 5),
-            _TrackerChip(
-              label: tracker,
-              active: tracker == selectedTracker,
-              accent: accent,
-              colorScheme: colorScheme,
-              onTap: () {
-                final notifier = ref.read(
-                  torrentTrackerFilterProvider.notifier,
-                );
-                notifier.state =
-                    tracker == selectedTracker ? null : tracker;
-              },
+          Text(
+            'Filter:',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 10,
             ),
-          ],
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: hasAnyOptions
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _FilterPill(
+                          label: 'Categories',
+                          selectedLabel: selectedCategory,
+                          options: categories,
+                          accent: accent,
+                          colorScheme: colorScheme,
+                          onSelected: (value) {
+                            ref
+                                .read(torrentCategoryFilterProvider.notifier)
+                                .state = value;
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        _FilterPill(
+                          label: 'Tags',
+                          selectedLabel: selectedTag,
+                          options: tags,
+                          accent: accent,
+                          colorScheme: colorScheme,
+                          onSelected: (value) {
+                            ref
+                                .read(torrentTagFilterProvider.notifier)
+                                .state = value;
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        _FilterPill(
+                          label: 'Trackers',
+                          selectedLabel: selectedTracker,
+                          options: trackers,
+                          accent: accent,
+                          colorScheme: colorScheme,
+                          onSelected: (value) {
+                            ref
+                                .read(torrentTrackerFilterProvider.notifier)
+                                .state = value;
+                          },
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(
+                    '—',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -530,41 +581,106 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _TrackerChip extends StatelessWidget {
+class _FilterPill extends StatelessWidget {
   final String label;
-  final bool active;
+  final String? selectedLabel;
+  final List<String> options;
   final Color accent;
   final ColorScheme colorScheme;
-  final VoidCallback onTap;
+  final ValueChanged<String?> onSelected;
 
-  const _TrackerChip({
+  const _FilterPill({
     required this.label,
-    required this.active,
+    required this.selectedLabel,
+    required this.options,
     required this.accent,
     required this.colorScheme,
-    required this.onTap,
+    required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    final active = selectedLabel != null;
+    final displayLabel = selectedLabel ?? label;
+
+    if (options.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: active ? accent.withValues(alpha: 0.12) : Colors.transparent,
-          border: Border.all(
-            color: active ? accent.withValues(alpha: 0.5) : colorScheme.outline,
-          ),
-          borderRadius: BorderRadius.circular(14),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: active ? accent : colorScheme.onSurfaceVariant,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             fontSize: 10,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: FontWeight.w400,
           ),
+        ),
+      );
+    }
+
+    return PopupMenuButton<String?>(
+      offset: const Offset(0, 36),
+      padding: EdgeInsets.zero,
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        PopupMenuItem<String?>(
+          value: null,
+          child: Text(
+            'All',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: selectedLabel == null
+                  ? FontWeight.w700
+                  : FontWeight.w400,
+            ),
+          ),
+        ),
+        ...options.map(
+          (o) => PopupMenuItem<String?>(
+            value: o,
+            child: Text(
+              o,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: o == selectedLabel
+                    ? FontWeight.w700
+                    : FontWeight.w400,
+              ),
+            ),
+          ),
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.qbittorrent.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              displayLabel,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: active
+                    ? AppColors.qbittorrent
+                    : colorScheme.onSurfaceVariant,
+                fontSize: 10,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.expand_more_rounded,
+              size: 10,
+              color: active
+                  ? AppColors.qbittorrent
+                  : colorScheme.onSurfaceVariant,
+            ),
+          ],
         ),
       ),
     );
