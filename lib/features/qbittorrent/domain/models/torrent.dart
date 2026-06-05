@@ -55,6 +55,7 @@ enum TorrentState {
       'stalledDL' => TorrentState.stalled,
       'checkingUP' || 'checkingDL' => TorrentState.checking,
       'pausedUP' || 'pausedDL' => TorrentState.paused,
+      'stoppedUP' || 'stoppedDL' || 'stopped' => TorrentState.paused,
       'queuedUP' => TorrentState.queuedUp,
       'queuedDL' => TorrentState.queuedDl,
       'moving' || 'allocating' => TorrentState.downloading,
@@ -151,7 +152,14 @@ class Torrent {
   }
 
   String get etaFormatted {
-    if (eta < 0 || state == 'pausedDL' || state == 'pausedUP') return '';
+    if (eta < 0 ||
+        state == 'pausedDL' ||
+        state == 'pausedUP' ||
+        state == 'stoppedDL' ||
+        state == 'stoppedUP' ||
+        state == 'stopped') {
+      return '';
+    }
     if (eta >= 8640000) return '∞';
     final d = eta ~/ 86400;
     final h = (eta % 86400) ~/ 3600;

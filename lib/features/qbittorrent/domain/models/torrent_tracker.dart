@@ -30,7 +30,7 @@ class TorrentTracker {
       numSeeds: parseInt(json['num_seeds']),
       numLeeches: parseInt(json['num_leeches']),
       numDownloaded: parseInt(json['num_downloaded']),
-      msg: json['msg'].toString(),
+      msg: json['msg']?.toString() ?? '',
     );
   }
 

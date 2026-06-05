@@ -47,7 +47,7 @@ class QbittorrentService {
         ? response.data as List<dynamic>
         : [];
     if (raw.length > 200) {
-      return compute((list) => _parseTorrentList(list), raw);
+      return compute(_parseTorrentList, raw);
     }
     return raw
         .map((e) => Torrent.fromJson(e as Map<String, dynamic>))
@@ -91,14 +91,14 @@ class QbittorrentService {
 
   Future<void> pauseTorrents(List<String> hashes) async {
     await _client.post(
-      '/api/v2/torrents/pause',
+      '/api/v2/torrents/stop',
       data: {'hashes': hashes.join('|')},
     );
   }
 
   Future<void> resumeTorrents(List<String> hashes) async {
     await _client.post(
-      '/api/v2/torrents/resume',
+      '/api/v2/torrents/start',
       data: {'hashes': hashes.join('|')},
     );
   }

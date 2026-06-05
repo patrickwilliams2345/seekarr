@@ -9,6 +9,7 @@ class QbittorrentClient {
   late final Dio _dio;
   final CookieJar _cookieJar;
   bool _authenticated = false;
+  Future<bool>? _authInFlight;
 
   QbittorrentClient({
     required String url,
@@ -38,17 +39,25 @@ class QbittorrentClient {
           handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 403 &&
-              hasCredentials &&
-              error.requestOptions.extra['skipAuthRetry'] != true) {
-            try {
-              await authenticate();
-              final response = await _dio.fetch(error.requestOptions);
-              handler.resolve(response);
-              return;
-            } catch (_) {}
+          final isAuthFailure = error.response?.statusCode == 403;
+          final alreadyRetried =
+              error.requestOptions.extra['skipAuthRetry'] == true;
+          if (!isAuthFailure || !hasCredentials || alreadyRetried) {
+            handler.next(error);
+            return;
           }
-          handler.next(error);
+          final ok = await authenticate();
+          if (!ok) {
+            handler.next(error);
+            return;
+          }
+          error.requestOptions.extra['skipAuthRetry'] = true;
+          try {
+            final response = await _dio.fetch(error.requestOptions);
+            handler.resolve(response);
+          } catch (_) {
+            handler.next(error);
+          }
         },
       ),
     );
@@ -73,9 +82,17 @@ class QbittorrentClient {
       password != null &&
       password!.isNotEmpty;
 
-  Future<bool> authenticate() async {
-    if (!hasCredentials) return true;
+  Future<bool> authenticate() {
+    if (!hasCredentials) return Future.value(true);
+    final inflight = _authInFlight;
+    if (inflight != null) return inflight;
+    final future = _doAuthenticate();
+    _authInFlight = future;
+    future.whenComplete(() => _authInFlight = null);
+    return future;
+  }
 
+  Future<bool> _doAuthenticate() async {
     try {
       final response = await _dio.post(
         '/api/v2/auth/login',

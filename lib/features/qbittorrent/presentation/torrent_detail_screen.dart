@@ -40,6 +40,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(torrentDetailPollingProvider(widget.hash));
     final torrentAsync = ref.watch(qbittorrentTorrentsProvider(widget.hash));
 
     return torrentAsync.when(

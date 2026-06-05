@@ -145,14 +145,9 @@ class SettingsService {
 
   Future<SettingsModel> loadSettings() async {
     final serviceSettings = await _loadServiceSettings();
-    final qbUsername =
-        _prefs.getString(
-          _serviceStorageKeys[ServiceKey.qbittorrent]!.username!,
-        ) ??
-        '';
-    final qbPassword = await _loadApiKey(
-      _serviceStorageKeys[ServiceKey.qbittorrent]!.secureApiKey,
-    );
+    final qbKeys = _serviceStorageKeys[ServiceKey.qbittorrent]!;
+    final qbUsername = _prefs.getString(qbKeys.username!) ?? '';
+    final qbPassword = await _loadApiKey(qbKeys.secureApiKey);
 
     return SettingsModel(
       seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
@@ -202,9 +197,15 @@ class SettingsService {
       }
 
       // Load API key, falling back to legacy secure key.
-      var apiKey = await _loadApiKey(storageKeys.secureApiKey);
-      if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
-        apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
+      // qBittorrent uses username/password instead of API key, so its
+      // secure key is loaded separately in loadSettings() to avoid a
+      // second secure store read here.
+      var apiKey = '';
+      if (service != ServiceKey.qbittorrent) {
+        apiKey = await _loadApiKey(storageKeys.secureApiKey);
+        if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
+          apiKey = await _loadApiKey(storageKeys.legacySecureApiKey!);
+        }
       }
 
       settingsByService[service] = (url, apiKey);

@@ -327,6 +327,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
+            ref.invalidate(allTorrentsProvider);
             ref.invalidate(torrentsProvider);
             ref.invalidate(transferInfoProvider);
           },
@@ -405,6 +406,11 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                   try {
                     await service.resumeTorrents(hashes);
                     ref.invalidate(torrentsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Resumed')),
+                      );
+                    }
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

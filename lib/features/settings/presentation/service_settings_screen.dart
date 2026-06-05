@@ -180,14 +180,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Widget _buildPasswordField() {
     return TextFormField(
       controller: _passwordController,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Password',
         hintText: 'Optional',
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.copy),
-          onPressed: _copyPassword,
-          tooltip: 'Copy password',
-        ),
       ),
       keyboardType: TextInputType.visiblePassword,
       textInputAction: TextInputAction.done,
@@ -209,14 +204,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (apiKey.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: apiKey));
       SnackBarHelper.info(context, 'API key copied to clipboard');
-    }
-  }
-
-  void _copyPassword() {
-    final password = _passwordController.text.trim();
-    if (password.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: password));
-      SnackBarHelper.info(context, 'Password copied to clipboard');
     }
   }
 }

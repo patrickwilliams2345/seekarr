@@ -44,17 +44,19 @@ String _healthEndpoint(ServiceKey service) {
 }
 
 Future<ServiceConnectionStatus> _verifyService(
-  ServiceKey service,
-  String url,
-  String apiKey,
-) async {
+  ServiceKey service, {
+  required String url,
+  required String apiKey,
+  required String username,
+  required String password,
+}) async {
   if (!service.usesApiKey) {
     final urlTrimmed = url.trim();
     if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
     final client = QbittorrentClient(
       url: urlTrimmed,
-      username: '',
-      password: '',
+      username: username.trim().isEmpty ? null : username.trim(),
+      password: password.isEmpty ? null : password,
     );
     try {
       await client.getVersion().timeout(const Duration(seconds: 5));
@@ -107,6 +109,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final Map<ServiceKey, TextEditingController> _apiKeyCtrl = {
     for (final k in ServiceKey.values) k: TextEditingController(),
   };
+  final Map<ServiceKey, TextEditingController> _usernameCtrl = {
+    for (final k in ServiceKey.values) k: TextEditingController(),
+  };
+  final Map<ServiceKey, TextEditingController> _passwordCtrl = {
+    for (final k in ServiceKey.values) k: TextEditingController(),
+  };
   final Map<ServiceKey, ServiceConnectionStatus?> _verifyStatus = {
     for (final k in ServiceKey.values) k: null,
   };
@@ -119,6 +127,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _pageController.dispose();
     for (final c in _urlCtrl.values) c.dispose();
     for (final c in _apiKeyCtrl.values) c.dispose();
+    for (final c in _usernameCtrl.values) c.dispose();
+    for (final c in _passwordCtrl.values) c.dispose();
     super.dispose();
   }
 
@@ -136,8 +146,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _verifying[service] = true);
     final status = await _verifyService(
       service,
-      _urlCtrl[service]!.text,
-      _apiKeyCtrl[service]!.text,
+      url: _urlCtrl[service]!.text,
+      apiKey: _apiKeyCtrl[service]!.text,
+      username: _usernameCtrl[service]!.text,
+      password: _passwordCtrl[service]!.text,
     );
     if (!mounted) return;
     setState(() {
@@ -152,7 +164,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     for (final k in ServiceKey.values) {
       if (_isServiceReady(k)) {
         if (k == ServiceKey.qbittorrent) {
-          updated = updated.copyWithQbittorrent(url: _urlCtrl[k]!.text.trim());
+          updated = updated.copyWithQbittorrent(
+            url: _urlCtrl[k]!.text.trim(),
+            username: _usernameCtrl[k]!.text.trim(),
+            password: _passwordCtrl[k]!.text,
+          );
         } else {
           updated = updated.copyWithService(
             k,
@@ -231,6 +247,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     enabled: _enabled,
                     urlCtrl: _urlCtrl,
                     apiKeyCtrl: _apiKeyCtrl,
+                    usernameCtrl: _usernameCtrl,
+                    passwordCtrl: _passwordCtrl,
                     verifyStatus: _verifyStatus,
                     verifying: _verifying,
                     onToggle: (k, v) => setState(() {
@@ -501,6 +519,8 @@ class _ServicesStep extends StatelessWidget {
     required this.enabled,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onToggle,
@@ -512,6 +532,8 @@ class _ServicesStep extends StatelessWidget {
   final Map<ServiceKey, bool> enabled;
   final Map<ServiceKey, TextEditingController> urlCtrl;
   final Map<ServiceKey, TextEditingController> apiKeyCtrl;
+  final Map<ServiceKey, TextEditingController> usernameCtrl;
+  final Map<ServiceKey, TextEditingController> passwordCtrl;
   final Map<ServiceKey, ServiceConnectionStatus?> verifyStatus;
   final Map<ServiceKey, bool> verifying;
   final void Function(ServiceKey, bool) onToggle;
@@ -573,6 +595,8 @@ class _ServicesStep extends StatelessWidget {
                           isEnabled: enabled[k]!,
                           urlCtrl: urlCtrl[k]!,
                           apiKeyCtrl: apiKeyCtrl[k]!,
+                          usernameCtrl: usernameCtrl[k]!,
+                          passwordCtrl: passwordCtrl[k]!,
                           verifyStatus: verifyStatus[k],
                           verifying: verifying[k]!,
                           onToggle: (v) => onToggle(k, v),
@@ -610,6 +634,8 @@ class _ServiceCard extends StatelessWidget {
     required this.isEnabled,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onToggle,
@@ -620,6 +646,8 @@ class _ServiceCard extends StatelessWidget {
   final bool isEnabled;
   final TextEditingController urlCtrl;
   final TextEditingController apiKeyCtrl;
+  final TextEditingController usernameCtrl;
+  final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
   final bool verifying;
   final ValueChanged<bool> onToggle;
@@ -689,6 +717,8 @@ class _ServiceCard extends StatelessWidget {
               serviceKey: serviceKey,
               urlCtrl: urlCtrl,
               apiKeyCtrl: apiKeyCtrl,
+              usernameCtrl: usernameCtrl,
+              passwordCtrl: passwordCtrl,
               verifyStatus: verifyStatus,
               verifying: verifying,
               onVerify: onVerify,
@@ -753,6 +783,8 @@ class _ServiceConfig extends StatelessWidget {
     required this.serviceKey,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onVerify,
@@ -762,6 +794,8 @@ class _ServiceConfig extends StatelessWidget {
   final ServiceKey serviceKey;
   final TextEditingController urlCtrl;
   final TextEditingController apiKeyCtrl;
+  final TextEditingController usernameCtrl;
+  final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
   final bool verifying;
   final VoidCallback onVerify;
@@ -810,10 +844,21 @@ class _ServiceConfig extends StatelessWidget {
                   controller: apiKeyCtrl,
                   isPassword: true,
                 ),
-              ] else ...[
+              ] else if (serviceKey == ServiceKey.qbittorrent) ...[
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'Username (optional)',
+                  controller: usernameCtrl,
+                ),
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'Password (optional)',
+                  controller: passwordCtrl,
+                  isPassword: true,
+                ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Credentials are optional for qBittorrent. Leave them empty if your instance does not require authentication.',
+                  'Leave credentials empty if your qBittorrent instance does not require authentication.',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
@@ -826,7 +871,7 @@ class _ServiceConfig extends StatelessWidget {
                   verifyStatus == ServiceConnectionStatus.disconnected) ...[
                 const SizedBox(height: 10),
                 const Text(
-                  'If your instance requires authentication, configure username and password in Settings → Services → qBittorrent after setup.',
+                  'Could not reach the instance. Double-check the URL and credentials.',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
