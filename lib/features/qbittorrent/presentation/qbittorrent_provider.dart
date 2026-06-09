@@ -102,6 +102,8 @@ final torrentTagFilterProvider = StateProvider<String?>((ref) => null);
 
 final torrentTrackerFilterProvider = StateProvider<String?>((ref) => null);
 
+final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
+
 final allTorrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final sort = ref.watch(torrentSortProvider);
@@ -148,15 +150,19 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final categoryFilter = ref.watch(torrentCategoryFilterProvider);
   final tagFilter = ref.watch(torrentTagFilterProvider);
   final trackerFilter = ref.watch(torrentTrackerFilterProvider);
+  final searchQuery = ref.watch(torrentSearchQueryProvider).trim().toLowerCase();
 
   final hasSubFilters =
       (categoryFilter != null && categoryFilter.isNotEmpty) ||
       (tagFilter != null && tagFilter.isNotEmpty) ||
       trackerFilter != null;
 
-  // Fast path: when status filter is "All" and no sub-filters are active,
-  // reuse allTorrentsProvider so we don't double-fetch /torrents/info.
-  if (filter == TorrentFilter.all && !hasSubFilters) {
+  // Fast path: when status filter is "All" and no sub-filters or search
+  // query are active, reuse allTorrentsProvider so we don't double-fetch
+  // /torrents/info.
+  if (filter == TorrentFilter.all &&
+      !hasSubFilters &&
+      searchQuery.isEmpty) {
     return await ref.watch(allTorrentsProvider.future);
   }
 
@@ -189,6 +195,17 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   if (trackerFilter != null) {
     torrents = torrents
         .where((t) => t.trackerDomain == trackerFilter)
+        .toList();
+  }
+
+  if (searchQuery.isNotEmpty) {
+    torrents = torrents
+        .where(
+          (t) =>
+              t.name.toLowerCase().contains(searchQuery) ||
+              t.category.toLowerCase().contains(searchQuery) ||
+              t.tags.any((tag) => tag.toLowerCase().contains(searchQuery)),
+        )
         .toList();
   }
 
