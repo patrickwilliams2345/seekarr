@@ -298,7 +298,7 @@ class _SearchResultCard extends StatelessWidget {
     final service = result.service;
 
     return AppCard.outlined(
-      onTap: () => context.push(result.route),
+      onTap: () => context.push(result.route, extra: result.routeExtra),
       backgroundColor: colorScheme.surfaceContainer,
       borderColor: colorScheme.outlineVariant,
       borderRadius: AppRadius.borderRadiusMd,

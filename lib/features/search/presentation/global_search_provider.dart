@@ -132,6 +132,7 @@ GlobalSearchResult _radarrResult(RadarrMovie item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Movie', item.hasFile ? 'Available' : 'Missing'],
     route: ServiceRoutes.radarrMovie(item.id),
+    routeExtra: item,
   );
 }
 
@@ -153,6 +154,7 @@ GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Series', item.status],
     route: ServiceRoutes.sonarrSeries(item.id),
+    routeExtra: item,
   );
 }
 
@@ -175,5 +177,6 @@ GlobalSearchResult _lidarrResult(LidarrArtist item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Artist', item.hasFiles ? 'Available' : 'Missing'],
     route: ServiceRoutes.lidarrArtist(item.id),
+    routeExtra: item,
   );
 }
