@@ -28,4 +28,13 @@ class TorrentFile {
   String get sizeFormatted => formatSize(size);
 
   String get progressFormatted => '${(progress * 100).toStringAsFixed(1)}%';
+
+  String get priorityLabel => switch (priority) {
+    0 => 'Do not download',
+    1 => 'Normal',
+    2 => 'High',
+    6 => 'Maximum',
+    7 => 'Mixed',
+    _ => 'Priority $priority',
+  };
 }

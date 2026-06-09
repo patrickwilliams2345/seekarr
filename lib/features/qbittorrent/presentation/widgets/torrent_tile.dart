@@ -23,7 +23,7 @@ class TorrentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final state = torrent.parsedState;
-    final badge = _stateBadge(state);
+    final badge = _stateBadge(context, state);
     final isActive = torrent.dlSpeed > 0 || torrent.upSpeed > 0;
 
     return Padding(
@@ -159,8 +159,10 @@ class TorrentTile extends StatelessWidget {
     );
   }
 
-  Widget _stateBadge(TorrentState state) {
-    final badgeDef = _badgeForState(state);
+  Widget _stateBadge(BuildContext context, TorrentState state) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final badgeDef = _badgeStyleForState(state, colorScheme);
+    final foreground = _foregroundForState(state, colorScheme);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -169,9 +171,9 @@ class TorrentTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        badgeDef.$2,
+        state.label,
         style: TextStyle(
-          color: badgeDef.$3,
+          color: foreground,
           fontSize: 9,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.4,
@@ -179,67 +181,51 @@ class TorrentTile extends StatelessWidget {
       ),
     );
   }
+}
 
-  (Color background, String label, Color foreground) _badgeForState(
-    TorrentState state,
-  ) {
-    switch (state) {
-      case TorrentState.downloading:
-        return (
-          AppColors.qbittorrent.withValues(alpha: 0.09),
-          'DL',
-          AppColors.qbittorrent,
-        );
-      case TorrentState.metaDownloading:
-        return (
-          AppColors.qbittorrent.withValues(alpha: 0.09),
-          'META',
-          AppColors.qbittorrent,
-        );
-      case TorrentState.seeding:
-        return (
-          AppColors.success.withValues(alpha: 0.09),
-          'SEED',
-          AppColors.success,
-        );
-      case TorrentState.stalled:
-        return (
-          AppColors.warning.withValues(alpha: 0.12),
-          'STALLED',
-          AppColors.warning,
-        );
-      case TorrentState.checking:
-        return (
-          AppColors.qbittorrent.withValues(alpha: 0.09),
-          'CHECK',
-          AppColors.qbittorrent,
-        );
-      case TorrentState.paused:
-        return (
-          const Color(0xFF9CA3AF).withValues(alpha: 0.18),
-          'PAUSE',
-          const Color(0xFF9CA3AF),
-        );
-      case TorrentState.queuedDl:
-      case TorrentState.queuedUp:
-        return (
-          const Color(0xFF9CA3AF).withValues(alpha: 0.12),
-          'QUEUE',
-          const Color(0xFF9CA3AF),
-        );
-      case TorrentState.error:
-        return (
-          const Color(0xFFEF4444).withValues(alpha: 0.12),
-          'ERR',
-          const Color(0xFFEF4444),
-        );
-      case TorrentState.unknown:
-        return (
-          const Color(0xFF9CA3AF).withValues(alpha: 0.12),
-          '—',
-          const Color(0xFF9CA3AF),
-        );
-    }
+(Color background, String _) _badgeStyleForState(
+  TorrentState state,
+  ColorScheme colorScheme,
+) {
+  final muted = colorScheme.onSurfaceVariant;
+  switch (state) {
+    case TorrentState.downloading:
+    case TorrentState.metaDownloading:
+    case TorrentState.checking:
+      return (AppColors.qbittorrent.withValues(alpha: 0.09), '');
+    case TorrentState.seeding:
+      return (AppColors.success.withValues(alpha: 0.09), '');
+    case TorrentState.stalled:
+      return (AppColors.warning.withValues(alpha: 0.12), '');
+    case TorrentState.paused:
+      return (muted.withValues(alpha: 0.18), '');
+    case TorrentState.queuedDl:
+    case TorrentState.queuedUp:
+      return (muted.withValues(alpha: 0.12), '');
+    case TorrentState.error:
+      return (colorScheme.error.withValues(alpha: 0.12), '');
+    case TorrentState.unknown:
+      return (muted.withValues(alpha: 0.12), '');
+  }
+}
+
+Color _foregroundForState(TorrentState state, ColorScheme colorScheme) {
+  switch (state) {
+    case TorrentState.downloading:
+    case TorrentState.metaDownloading:
+    case TorrentState.checking:
+      return AppColors.qbittorrent;
+    case TorrentState.seeding:
+      return AppColors.success;
+    case TorrentState.stalled:
+      return AppColors.warning;
+    case TorrentState.paused:
+    case TorrentState.queuedDl:
+    case TorrentState.queuedUp:
+    case TorrentState.unknown:
+      return colorScheme.onSurfaceVariant;
+    case TorrentState.error:
+      return colorScheme.error;
   }
 }
 

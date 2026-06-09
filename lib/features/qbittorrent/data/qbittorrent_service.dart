@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
@@ -12,6 +13,8 @@ List<Torrent> _parseTorrentList(List<dynamic> json) {
       .map(Torrent.fromJson)
       .toList(growable: false);
 }
+
+const int _torrentIsolateParseThreshold = 200;
 
 class QbittorrentService {
   final QbittorrentClient _client;
@@ -46,7 +49,7 @@ class QbittorrentService {
     final List<dynamic> raw = response.data is List
         ? response.data as List<dynamic>
         : [];
-    if (raw.length > 200) {
+    if (raw.length > _torrentIsolateParseThreshold) {
       return compute(_parseTorrentList, raw);
     }
     return raw
@@ -128,6 +131,21 @@ class QbittorrentService {
     await _client.post('/api/v2/torrents/add', data: data);
   }
 
+  Future<void> addTorrentFiles(
+    List<MultipartFile> files, {
+    String? category,
+    String? savePath,
+  }) async {
+    final form = FormData();
+    for (final f in files) {
+      form.files.add(MapEntry('torrents', f));
+    }
+    if (category != null) form.fields.add(MapEntry('category', category));
+    if (savePath != null) form.fields.add(MapEntry('savepath', savePath));
+
+    await _client.post('/api/v2/torrents/add', formData: form);
+  }
+
   Future<void> setCategory(List<String> hashes, String category) async {
     await _client.post(
       '/api/v2/torrents/setCategory',
@@ -184,5 +202,34 @@ class QbittorrentService {
 
   Future<void> toggleAlternativeSpeedLimits() async {
     await _client.post('/api/v2/transfer/toggleSpeedLimitsMode');
+  }
+
+  Future<void> filePrio({
+    required String hash,
+    required List<int> fileIndexes,
+    required int priority,
+  }) async {
+    await _client.post(
+      '/api/v2/torrents/filePrio',
+      data: {
+        'hash': hash,
+        'id': fileIndexes.join('|'),
+        'priority': priority,
+      },
+    );
+  }
+
+  Future<void> recheck(String hash) async {
+    await _client.post(
+      '/api/v2/torrents/recheck',
+      data: {'hashes': hash},
+    );
+  }
+
+  Future<void> reannounce(List<String> hashes) async {
+    await _client.post(
+      '/api/v2/torrents/reannounce',
+      data: {'hashes': hashes.join('|')},
+    );
   }
 }

@@ -133,6 +133,7 @@ class QbittorrentClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? data,
+    FormData? formData,
   }) async {
     if (hasCredentials && !_authenticated) {
       await authenticate();
@@ -140,9 +141,11 @@ class QbittorrentClient {
     return _dio.post(
       path,
       queryParameters: queryParameters,
-      data: data,
+      data: formData ?? data,
       options: Options(
-        contentType: Headers.formUrlEncodedContentType,
+        contentType: formData != null
+            ? Headers.multipartFormDataContentType
+            : Headers.formUrlEncodedContentType,
       ),
     );
   }

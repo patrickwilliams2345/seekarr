@@ -29,7 +29,7 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   return QbittorrentService(client);
 });
 
-enum TorrentFilter { all, downloading, seeding, paused, queued }
+enum TorrentFilter { all, downloading, seeding, completed, paused, queued }
 
 enum TorrentSort {
   name,
@@ -149,9 +149,21 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final tagFilter = ref.watch(torrentTagFilterProvider);
   final trackerFilter = ref.watch(torrentTrackerFilterProvider);
 
+  final hasSubFilters =
+      (categoryFilter != null && categoryFilter.isNotEmpty) ||
+      (tagFilter != null && tagFilter.isNotEmpty) ||
+      trackerFilter != null;
+
+  // Fast path: when status filter is "All" and no sub-filters are active,
+  // reuse allTorrentsProvider so we don't double-fetch /torrents/info.
+  if (filter == TorrentFilter.all && !hasSubFilters) {
+    return await ref.watch(allTorrentsProvider.future);
+  }
+
   final apiFilter = switch (filter) {
     TorrentFilter.downloading => 'downloading',
     TorrentFilter.seeding => 'seeding',
+    TorrentFilter.completed => 'completed',
     TorrentFilter.paused => 'stopped',
     _ => 'all',
   };

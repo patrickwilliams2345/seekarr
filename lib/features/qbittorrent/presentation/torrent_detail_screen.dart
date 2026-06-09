@@ -6,10 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
+import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
+import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_edit_dialogs.dart';
 
 class TorrentDetailScreen extends ConsumerStatefulWidget {
   final String hash;
@@ -43,7 +46,9 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     ref.watch(torrentDetailPollingProvider(widget.hash));
     final torrentAsync = ref.watch(qbittorrentTorrentsProvider(widget.hash));
 
-    return torrentAsync.when(
+    return AsyncValueWidget<List<Torrent>>(
+      value: torrentAsync,
+      serviceName: 'qBittorrent',
       data: (matches) {
         if (matches.isEmpty) {
           return Scaffold(
@@ -53,12 +58,6 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
         }
         return _buildContent(matches.first);
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Scaffold(
-        appBar: AppBar(title: const Text('Torrent')),
-        body: Center(child: Text('Error: $error')),
-      ),
     );
   }
 
@@ -124,13 +123,13 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
   }
 }
 
-class _InfoTab extends StatelessWidget {
+class _InfoTab extends ConsumerWidget {
   final Torrent torrent;
 
   const _InfoTab({required this.torrent});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -141,13 +140,92 @@ class _InfoTab extends StatelessWidget {
         _InfoRow(label: 'Download Speed', value: torrent.dlSpeedFormatted),
         _InfoRow(label: 'Upload Speed', value: torrent.upSpeedFormatted),
         _InfoRow(label: 'ETA', value: torrent.etaFormatted),
-        _InfoRow(label: 'Category', value: torrent.category),
-        _InfoRow(label: 'Tags', value: torrent.tags.join(', ')),
+        _EditableInfoRow(
+          label: 'Category',
+          value: torrent.category,
+          onTap: () => _editCategory(context, ref, torrent),
+        ),
+        _EditableInfoRow(
+          label: 'Tags',
+          value: torrent.tags.join(', '),
+          onTap: () => _editTags(context, ref, torrent),
+        ),
         _InfoRow(label: 'Ratio', value: torrent.ratio.toStringAsFixed(2)),
         _InfoRow(label: 'Seeders', value: '${torrent.seeders}'),
         _InfoRow(label: 'Leechers', value: '${torrent.leechers}'),
       ],
     );
+  }
+
+  Future<void> _editCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Torrent torrent,
+  ) async {
+    final result = await showEditCategoryDialog(
+      context,
+      currentCategory: torrent.category,
+    );
+    if (result == null) return;
+    if (result == torrent.category) return;
+    if (!context.mounted) return;
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      await service.setCategory([torrent.hash], result);
+      ref.invalidate(torrentsProvider);
+      ref.invalidate(allTorrentsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Category set to "${result.trim()}"')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to set category: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _editTags(
+    BuildContext context,
+    WidgetRef ref,
+    Torrent torrent,
+  ) async {
+    final result = await showEditTagsDialog(
+      context,
+      currentTags: torrent.tags,
+    );
+    if (result == null) return;
+    final newSet = result.toSet();
+    final oldSet = torrent.tags.toSet();
+    if (newSet.length == oldSet.length && newSet.containsAll(oldSet)) return;
+    if (!context.mounted) return;
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      final toAdd = newSet.difference(oldSet).toList();
+      final toRemove = oldSet.difference(newSet).toList();
+      if (toAdd.isNotEmpty) {
+        await service.addTags([torrent.hash], toAdd);
+      }
+      if (toRemove.isNotEmpty) {
+        await service.removeTags([torrent.hash], toRemove);
+      }
+      ref.invalidate(torrentsProvider);
+      ref.invalidate(allTorrentsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tags updated')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update tags: $e')),
+        );
+      }
+    }
   }
 }
 
@@ -187,6 +265,56 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+class _EditableInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _EditableInfoRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value.isEmpty ? '—' : value,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Icon(
+              Icons.edit_outlined,
+              size: 14,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FilesTab extends ConsumerWidget {
   final String hash;
 
@@ -196,7 +324,9 @@ class _FilesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filesAsync = ref.watch(torrentFilesProvider(hash));
 
-    return filesAsync.when(
+    return AsyncValueWidget<List<TorrentFile>>(
+      value: filesAsync,
+      serviceName: 'qBittorrent',
       data: (files) {
         if (files.isEmpty) {
           return const Center(child: Text('No files'));
@@ -204,26 +334,43 @@ class _FilesTab extends ConsumerWidget {
         return ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: files.length,
-          itemBuilder: (context, index) => _FileRow(file: files[index]),
+          itemBuilder: (context, index) => _FileRow(
+            file: files[index],
+            index: index,
+            hash: hash,
+          ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
     );
   }
 }
 
-class _FileRow extends StatelessWidget {
+class _FileRow extends ConsumerWidget {
   final TorrentFile file;
+  final int index;
+  final String hash;
 
-  const _FileRow({required this.file});
+  const _FileRow({
+    required this.file,
+    required this.index,
+    required this.hash,
+  });
+
+  static const _priorityLabels = <int, String>{
+    0: 'Do not download',
+    1: 'Normal',
+    2: 'High',
+    6: 'Maximum',
+    7: 'Mixed',
+  };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
       dense: true,
+      onTap: () => _showPriorityMenu(context, ref),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(2),
         child: SizedBox(
@@ -242,6 +389,12 @@ class _FileRow extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
+      subtitle: Text(
+        file.priorityLabel,
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      ),
       trailing: Text(
         '${file.sizeFormatted} • ${file.progressFormatted}',
         style: Theme.of(
@@ -249,6 +402,59 @@ class _FileRow extends StatelessWidget {
         ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
       ),
     );
+  }
+
+  Future<void> _showPriorityMenu(BuildContext context, WidgetRef ref) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _priorityLabels.entries
+              .map(
+                (e) => ListTile(
+                  dense: true,
+                  title: Text(e.value),
+                  trailing: file.priority == e.key
+                      ? Icon(
+                          Icons.check_rounded,
+                          color: AppColors.qbittorrent,
+                          size: 18,
+                        )
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(e.key),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ),
+    );
+    if (picked == null) return;
+    if (picked == file.priority) return;
+    if (!context.mounted) return;
+
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      await service.filePrio(
+        hash: hash,
+        fileIndexes: [index],
+        priority: picked,
+      );
+      ref.invalidate(torrentFilesProvider(hash));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Priority set to ${_priorityLabels[picked]}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to set priority: $e')),
+        );
+      }
+    }
   }
 }
 
@@ -261,7 +467,9 @@ class _TrackersTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trackersAsync = ref.watch(torrentTrackersProvider(hash));
 
-    return trackersAsync.when(
+    return AsyncValueWidget<List<TorrentTracker>>(
+      value: trackersAsync,
+      serviceName: 'qBittorrent',
       data: (trackers) {
         if (trackers.isEmpty) {
           return const Center(child: Text('No trackers'));
@@ -273,8 +481,6 @@ class _TrackersTab extends ConsumerWidget {
               _TrackerRow(tracker: trackers[index]),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
     );
   }
 }
@@ -338,6 +544,25 @@ class _StatusDot extends StatelessWidget {
       width: 6,
       height: 6,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+
+  const _SectionLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+        letterSpacing: 0.4,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }
@@ -459,8 +684,166 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy name'),
         ),
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 8),
+        _SectionLabel('Speed limits (this torrent)'),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _setLimit(
+            context,
+            ref,
+            torrent,
+            isDownload: true,
+          ),
+          icon: const Icon(Icons.south_rounded, size: 16),
+          label: const Text('Download limit'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _setLimit(
+            context,
+            ref,
+            torrent,
+            isDownload: false,
+          ),
+          icon: const Icon(Icons.north_rounded, size: 16),
+          label: const Text('Upload limit'),
+        ),
+        const SizedBox(height: 24),
+        _SectionLabel('Global'),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _toggleAltSpeed(context, ref),
+          icon: const Icon(Icons.shield_moon_outlined, size: 16),
+          label: const Text('Toggle alternative speed limits'),
+        ),
+        const SizedBox(height: 24),
+        _SectionLabel('Maintenance'),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _recheck(context, ref, torrent),
+          icon: const Icon(Icons.refresh_rounded, size: 16),
+          label: const Text('Force recheck'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _reannounce(context, ref, torrent),
+          icon: const Icon(Icons.campaign_rounded, size: 16),
+          label: const Text('Reannounce to trackers'),
+        ),
       ],
     );
+  }
+
+  Future<void> _recheck(
+    BuildContext context,
+    WidgetRef ref,
+    Torrent torrent,
+  ) async {
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      await service.recheck(torrent.hash);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recheck started')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to recheck: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _reannounce(
+    BuildContext context,
+    WidgetRef ref,
+    Torrent torrent,
+  ) async {
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      await service.reannounce([torrent.hash]);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reannounced to trackers')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reannounce: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _setLimit(
+    BuildContext context,
+    WidgetRef ref,
+    Torrent torrent, {
+    required bool isDownload,
+  }) async {
+    // qB doesn't expose per-torrent current limits directly; we use 0 as a
+    // best-effort starting point (the user can re-type the actual value).
+    final result = await showSpeedLimitDialog(
+      context,
+      title: isDownload ? 'Download limit' : 'Upload limit',
+      currentLimitBytes: 0,
+    );
+    if (result == null) return;
+    if (!context.mounted) return;
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      if (isDownload) {
+        await service.setDownloadLimit([torrent.hash], result.bytesPerSecond!);
+      } else {
+        await service.setUploadLimit([torrent.hash], result.bytesPerSecond!);
+      }
+      ref.invalidate(torrentsProvider);
+      if (context.mounted) {
+        final bytes = result.bytesPerSecond!;
+        final label = bytes == 0
+            ? 'cleared'
+            : '${(bytes / 1024).toStringAsFixed(0)} KB/s';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isDownload
+                  ? 'Download limit set to $label'
+                  : 'Upload limit set to $label',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to set limit: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleAltSpeed(BuildContext context, WidgetRef ref) async {
+    final service = ref.read(qbittorrentServiceProvider);
+    try {
+      await service.toggleAlternativeSpeedLimits();
+      ref.invalidate(transferInfoProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alternative speed limits toggled')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to toggle: $e')),
+        );
+      }
+    }
   }
 
   void _confirmDeleteSingle(
@@ -468,60 +851,34 @@ class _ActionsTab extends ConsumerWidget {
     WidgetRef ref,
     Torrent torrent,
   ) {
-    showDialog<void>(
+    showTorrentDeleteDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete torrent'),
-        content: Text('Delete "${torrent.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(ctx).colorScheme.error,
+      title: 'Delete torrent',
+      message: 'Delete "${torrent.name}"? This action cannot be undone.',
+    ).then((result) async {
+      if (!result.confirmed) return;
+      if (!context.mounted) return;
+      final service = ref.read(qbittorrentServiceProvider);
+      try {
+        await service.deleteTorrents([torrent.hash], deleteFiles: result.deleteFiles);
+        ref.invalidate(torrentsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.deleteFiles ? 'Deleted torrent and files' : 'Deleted torrent',
+              ),
             ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final service = ref.read(qbittorrentServiceProvider);
-              try {
-                await service.deleteTorrents([torrent.hash], deleteFiles: false);
-                ref.invalidate(torrentsProvider);
-                if (context.mounted) context.pop();
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final service = ref.read(qbittorrentServiceProvider);
-              try {
-                await service.deleteTorrents([torrent.hash], deleteFiles: true);
-                ref.invalidate(torrentsProvider);
-                if (context.mounted) context.pop();
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete + files'),
-          ),
-        ],
-      ),
-    );
+          );
+          context.pop();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: $e')),
+          );
+        }
+      }
+    });
   }
 }

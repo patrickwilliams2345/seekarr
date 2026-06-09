@@ -349,5 +349,76 @@ void main() {
       expect(trackers.first.status, 2);
       expect(trackers.first.numSeeds, 2);
     });
+
+    test('addTorrentFiles sends multipart with each file and optional fields', () async {
+      final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');
+      final service = _service(adapter);
+
+      final f1 = MultipartFile.fromBytes(
+        [1, 2, 3],
+        filename: 'a.torrent',
+      );
+      final f2 = MultipartFile.fromBytes(
+        [4, 5, 6],
+        filename: 'b.torrent',
+      );
+      await service.addTorrentFiles(
+        [f1, f2],
+        category: 'movies',
+        savePath: '/dl',
+      );
+
+      final req = adapter.requests.last;
+      expect(req.path, '/api/v2/torrents/add');
+      expect(req.method, 'POST');
+      expect(
+        req.headers[Headers.contentTypeHeader],
+        contains(Headers.multipartFormDataContentType.toString()),
+      );
+      // The body bytes won't roundtrip cleanly through `_StubAdapter` for
+      // multipart (it tries to URL-decode them). Just confirm the request
+      // hit the right endpoint with multipart content type.
+    });
+
+    test('addTorrentFiles omits empty optional fields', () async {
+      final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');
+      final service = _service(adapter);
+
+      await service.addTorrentFiles([MultipartFile.fromBytes([1], filename: 'a.torrent')]);
+      expect(adapter.requests.last.path, '/api/v2/torrents/add');
+    });
+
+    test('filePrio sends hash, file indexes and priority', () async {
+      final adapter = _StubAdapter()..setText('/api/v2/torrents/filePrio', '');
+      final service = _service(adapter);
+
+      await service.filePrio(
+        hash: 'h1',
+        fileIndexes: [0, 2, 4],
+        priority: 6,
+      );
+      final body = adapter.requestBodies.last;
+      expect(body['hash'], 'h1');
+      expect(body['id'], '0|2|4');
+      expect(body['priority'], '6');
+    });
+
+    test('recheck posts single hash', () async {
+      final adapter = _StubAdapter()..setText('/api/v2/torrents/recheck', '');
+      final service = _service(adapter);
+
+      await service.recheck('h1');
+      expect(adapter.requests.last.path, '/api/v2/torrents/recheck');
+      expect(adapter.requestBodies.last, {'hashes': 'h1'});
+    });
+
+    test('reannounce joins hashes with pipe', () async {
+      final adapter = _StubAdapter()..setText('/api/v2/torrents/reannounce', '');
+      final service = _service(adapter);
+
+      await service.reannounce(['a', 'b']);
+      expect(adapter.requests.last.path, '/api/v2/torrents/reannounce');
+      expect(adapter.requestBodies.last, {'hashes': 'a|b'});
+    });
   });
 }

@@ -72,4 +72,38 @@ void main() {
       expect(file.progressFormatted, '50.0%');
     });
   });
+
+  group('TorrentFile.priorityLabel', () {
+    TorrentFile withPriority(int p) => TorrentFile(
+          index: 0,
+          name: 'x',
+          size: 0,
+          progress: 0,
+          priority: p,
+        );
+
+    test('0 → Do not download', () {
+      expect(withPriority(0).priorityLabel, 'Do not download');
+    });
+
+    test('1 → Normal', () {
+      expect(withPriority(1).priorityLabel, 'Normal');
+    });
+
+    test('2 → High', () {
+      expect(withPriority(2).priorityLabel, 'High');
+    });
+
+    test('6 → Maximum', () {
+      expect(withPriority(6).priorityLabel, 'Maximum');
+    });
+
+    test('7 → Mixed', () {
+      expect(withPriority(7).priorityLabel, 'Mixed');
+    });
+
+    test('unknown value falls back to "Priority N"', () {
+      expect(withPriority(99).priorityLabel, 'Priority 99');
+    });
+  });
 }

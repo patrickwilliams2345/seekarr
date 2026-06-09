@@ -36,7 +36,7 @@ import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:seekarr/features/qbittorrent/presentation/torrent_detail_screen.dart';
-import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
+import 'package:seekarr/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -319,7 +319,7 @@ GoRoute _qbittorrentRoutes({required String path}) {
       key: state.pageKey,
       child: ServiceDashboardScreen(
         service: ServiceKey.qbittorrent,
-        trailingAction: const AddTorrentButton(),
+        trailingAction: const QbittorrentActionsBar(),
         child: const QbittorrentScreen(
           showAppBar: false,
           topPadding: _serviceDashboardTopPadding,
