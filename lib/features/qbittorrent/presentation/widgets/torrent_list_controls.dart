@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:seekarr/core/app_radius.dart';
+import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
@@ -37,20 +39,26 @@ class TorrentFilterChipsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedFilter = ref.watch(torrentFilterProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final accent = AppColors.qbittorrent;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Row(
         children: [
           for (final filter in kTorrentStatusFilters) ...[
-            if (filter != kTorrentStatusFilters.first) const SizedBox(width: 6),
+            if (filter != kTorrentStatusFilters.first)
+              const SizedBox(width: AppSpacing.sm - 2),
             _FilterChip(
               label: torrentFilterLabel(filter),
               active: filter == selectedFilter,
               accent: accent,
               colorScheme: colorScheme,
+              textTheme: textTheme,
               onTap: () {
                 ref.read(torrentFilterProvider.notifier).state = filter;
               },
@@ -78,20 +86,23 @@ class TorrentFilterPillsRow extends ConsumerWidget {
         categories.isNotEmpty || tags.isNotEmpty || trackers.isNotEmpty;
 
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final accent = AppColors.qbittorrent;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Row(
         children: [
           Text(
-            'Filter:',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            'Filter',
+            style: textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
-              fontSize: 10,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: hasAnyOptions
                 ? SingleChildScrollView(
@@ -104,31 +115,34 @@ class TorrentFilterPillsRow extends ConsumerWidget {
                           options: categories,
                           accent: accent,
                           colorScheme: colorScheme,
+                          textTheme: textTheme,
                           onSelected: (value) {
                             ref
                                 .read(torrentCategoryFilterProvider.notifier)
                                 .state = value;
                           },
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xs),
                         _FilterPill(
                           label: 'Tags',
                           selectedLabel: selectedTag,
                           options: tags,
                           accent: accent,
                           colorScheme: colorScheme,
+                          textTheme: textTheme,
                           onSelected: (value) {
                             ref.read(torrentTagFilterProvider.notifier).state =
                                 value;
                           },
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xs),
                         _FilterPill(
                           label: 'Trackers',
                           selectedLabel: selectedTracker,
                           options: trackers,
                           accent: accent,
                           colorScheme: colorScheme,
+                          textTheme: textTheme,
                           onSelected: (value) {
                             ref
                                 .read(torrentTrackerFilterProvider.notifier)
@@ -140,9 +154,10 @@ class TorrentFilterPillsRow extends ConsumerWidget {
                   )
                 : Text(
                     '—',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 10,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                   ),
           ),
@@ -160,19 +175,23 @@ class TorrentSortRow extends ConsumerWidget {
     final currentSort = ref.watch(torrentSortProvider);
     final reverse = ref.watch(torrentSortReverseProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = AppColors.qbittorrent;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Row(
         children: [
           Text(
-            'Sort:',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            'Sort',
+            style: textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
-              fontSize: 10,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -180,8 +199,8 @@ class TorrentSortRow extends ConsumerWidget {
                 children: [
                   for (final sort in TorrentSort.values) ...[
                     if (sort != TorrentSort.values.first)
-                      const SizedBox(width: 4),
-                    GestureDetector(
+                      const SizedBox(width: AppSpacing.xs),
+                    InkWell(
                       onTap: () {
                         if (sort == currentSort) {
                           ref.read(torrentSortReverseProvider.notifier).state =
@@ -190,34 +209,31 @@ class TorrentSortRow extends ConsumerWidget {
                           ref.read(torrentSortProvider.notifier).state = sort;
                         }
                       },
+                      borderRadius: AppRadius.borderRadiusMd,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                          horizontal: AppSpacing.md - 2,
+                          vertical: AppSpacing.xs + 1,
                         ),
                         decoration: BoxDecoration(
                           color: sort == currentSort
-                              ? AppColors.qbittorrent.withValues(alpha: 0.12)
+                              ? accent.withValues(alpha: 0.12)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppRadius.borderRadiusMd,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               sort.label,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: sort == currentSort
-                                        ? AppColors.qbittorrent
-                                        : colorScheme.onSurfaceVariant,
-                                    fontSize: 10,
-                                    fontWeight: sort == currentSort
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                  ),
+                              style: textTheme.labelSmall?.copyWith(
+                                color: sort == currentSort
+                                    ? accent
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: sort == currentSort
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
                             ),
                             if (sort == currentSort) ...[
                               const SizedBox(width: 2),
@@ -225,8 +241,8 @@ class TorrentSortRow extends ConsumerWidget {
                                 reverse
                                     ? Icons.arrow_downward_rounded
                                     : Icons.arrow_upward_rounded,
-                                size: 10,
-                                color: AppColors.qbittorrent,
+                                size: 12,
+                                color: accent,
                               ),
                             ],
                           ],
@@ -249,6 +265,7 @@ class _FilterChip extends StatelessWidget {
   final bool active;
   final Color accent;
   final ColorScheme colorScheme;
+  final TextTheme textTheme;
   final VoidCallback onTap;
 
   const _FilterChip({
@@ -256,25 +273,33 @@ class _FilterChip extends StatelessWidget {
     required this.active,
     required this.accent,
     required this.colorScheme,
+    required this.textTheme,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: AppRadius.borderRadiusFull,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md + 1,
+          vertical: AppSpacing.xs + 1,
+        ),
         decoration: BoxDecoration(
-          color: active ? accent.withValues(alpha: 0.22) : Colors.transparent,
-          border: Border.all(color: active ? accent : colorScheme.outline),
-          borderRadius: BorderRadius.circular(20),
+          color: active
+              ? accent.withValues(alpha: 0.15)
+              : colorScheme.surfaceContainer,
+          border: Border.all(
+            color: active ? accent : colorScheme.outlineVariant,
+          ),
+          borderRadius: AppRadius.borderRadiusFull,
         ),
         child: Text(
           label,
-          style: TextStyle(
+          style: textTheme.labelSmall?.copyWith(
             color: active ? accent : colorScheme.onSurfaceVariant,
-            fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -289,6 +314,7 @@ class _FilterPill extends StatelessWidget {
   final List<String> options;
   final Color accent;
   final ColorScheme colorScheme;
+  final TextTheme textTheme;
   final ValueChanged<String?> onSelected;
 
   const _FilterPill({
@@ -297,6 +323,7 @@ class _FilterPill extends StatelessWidget {
     required this.options,
     required this.accent,
     required this.colorScheme,
+    required this.textTheme,
     required this.onSelected,
   });
 
@@ -307,16 +334,14 @@ class _FilterPill extends StatelessWidget {
 
     if (options.isEmpty) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md - 2,
+          vertical: AppSpacing.xs + 1,
         ),
         child: Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          style: textTheme.labelSmall?.copyWith(
             color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            fontSize: 10,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -332,7 +357,7 @@ class _FilterPill extends StatelessWidget {
           value: null,
           child: Text(
             'All',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            style: textTheme.bodySmall?.copyWith(
               fontWeight: selectedLabel == null
                   ? FontWeight.w700
                   : FontWeight.w400,
@@ -344,7 +369,7 @@ class _FilterPill extends StatelessWidget {
             value: o,
             child: Text(
               o,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: textTheme.bodySmall?.copyWith(
                 fontWeight: o == selectedLabel
                     ? FontWeight.w700
                     : FontWeight.w400,
@@ -354,33 +379,31 @@ class _FilterPill extends StatelessWidget {
         ),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md - 2,
+          vertical: AppSpacing.xs + 1,
+        ),
         decoration: BoxDecoration(
           color: active
-              ? AppColors.qbittorrent.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+              ? accent.withValues(alpha: 0.12)
+              : colorScheme.surfaceContainer,
+          borderRadius: AppRadius.borderRadiusMd,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               displayLabel,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: active
-                    ? AppColors.qbittorrent
-                    : colorScheme.onSurfaceVariant,
-                fontSize: 10,
+              style: textTheme.labelSmall?.copyWith(
+                color: active ? accent : colorScheme.onSurfaceVariant,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
             const SizedBox(width: 2),
             Icon(
               Icons.expand_more_rounded,
-              size: 10,
-              color: active
-                  ? AppColors.qbittorrent
-                  : colorScheme.onSurfaceVariant,
+              size: 12,
+              color: active ? accent : colorScheme.onSurfaceVariant,
             ),
           ],
         ),
