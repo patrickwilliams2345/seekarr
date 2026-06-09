@@ -50,17 +50,17 @@ class TorrentFilterChipsRow extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          for (final filter in kTorrentStatusFilters) ...[
-            if (filter != kTorrentStatusFilters.first)
-              const SizedBox(width: AppSpacing.sm - 2),
+          for (var i = 0; i < kTorrentStatusFilters.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.sm - 2),
             _FilterChip(
-              label: torrentFilterLabel(filter),
-              active: filter == selectedFilter,
+              label: torrentFilterLabel(kTorrentStatusFilters[i]),
+              active: kTorrentStatusFilters[i] == selectedFilter,
               accent: accent,
               colorScheme: colorScheme,
               textTheme: textTheme,
               onTap: () {
-                ref.read(torrentFilterProvider.notifier).state = filter;
+                ref.read(torrentFilterProvider.notifier).state =
+                    kTorrentStatusFilters[i];
               },
             ),
           ],
@@ -348,13 +348,13 @@ class _FilterPill extends StatelessWidget {
       );
     }
 
-    return PopupMenuButton<String?>(
+    return PopupMenuButton<String>(
       offset: const Offset(0, 36),
       padding: EdgeInsets.zero,
-      onSelected: onSelected,
+      onSelected: (value) => onSelected(value.isEmpty ? null : value),
       itemBuilder: (context) => [
-        PopupMenuItem<String?>(
-          value: null,
+        PopupMenuItem<String>(
+          value: '',
           child: Text(
             'All',
             style: textTheme.bodySmall?.copyWith(
@@ -365,7 +365,7 @@ class _FilterPill extends StatelessWidget {
           ),
         ),
         ...options.map(
-          (o) => PopupMenuItem<String?>(
+          (o) => PopupMenuItem<String>(
             value: o,
             child: Text(
               o,
@@ -378,34 +378,43 @@ class _FilterPill extends StatelessWidget {
           ),
         ),
       ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md - 2,
-          vertical: AppSpacing.xs + 1,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? accent.withValues(alpha: 0.12)
-              : colorScheme.surfaceContainer,
+      child: Material(
+        type: MaterialType.transparency,
+        clipBehavior: Clip.hardEdge,
+        borderRadius: AppRadius.borderRadiusMd,
+        child: InkWell(
+          onTap: null,
           borderRadius: AppRadius.borderRadiusMd,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              displayLabel,
-              style: textTheme.labelSmall?.copyWith(
-                color: active ? accent : colorScheme.onSurfaceVariant,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md - 2,
+              vertical: AppSpacing.xs + 1,
             ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.expand_more_rounded,
-              size: 12,
-              color: active ? accent : colorScheme.onSurfaceVariant,
+            decoration: BoxDecoration(
+              color: active
+                  ? accent.withValues(alpha: 0.12)
+                  : colorScheme.surfaceContainer,
+              borderRadius: AppRadius.borderRadiusMd,
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  displayLabel,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: active ? accent : colorScheme.onSurfaceVariant,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.expand_more_rounded,
+                  size: 12,
+                  color: active ? accent : colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
