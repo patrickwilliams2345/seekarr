@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/core/widgets/search_bar_header.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
@@ -64,16 +63,15 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
         children: [
           if (widget.topPadding > 0) SizedBox(height: widget.topPadding),
           _buildStatsBar(),
-          const TorrentFilterChipsRow(),
-          const TorrentFilterPillsRow(),
           SearchBarHeader(
             hintText: 'Search torrents...',
             onQueryChanged: (query) {
               ref.read(torrentSearchQueryProvider.notifier).state = query;
             },
           ),
+          const TorrentFilterChipsRow(),
+          const TorrentFilterPillsRow(),
           const TorrentSortRow(),
-          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: _buildTorrentList(context, torrentsAsync, selectedHashes),
           ),
