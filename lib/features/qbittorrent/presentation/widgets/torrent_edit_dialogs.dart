@@ -86,8 +86,7 @@ class SpeedLimitResult {
   final int? bytesPerSecond;
   const SpeedLimitResult._(this.bytesPerSecond);
   static const noChange = SpeedLimitResult._(null);
-  factory SpeedLimitResult.kbps(int kbps) =>
-      SpeedLimitResult._(kbps * 1024);
+  factory SpeedLimitResult.kbps(int kbps) => SpeedLimitResult._(kbps * 1024);
 }
 
 Future<SpeedLimitResult?> showSpeedLimitDialog(

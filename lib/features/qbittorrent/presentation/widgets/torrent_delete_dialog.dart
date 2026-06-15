@@ -50,7 +50,10 @@ Future<TorrentDeleteResult> showTorrentDeleteDialog({
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(message, style: Theme.of(dialogContext).textTheme.bodyMedium),
+                Text(
+                  message,
+                  style: Theme.of(dialogContext).textTheme.bodyMedium,
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 CheckboxListTile(
                   value: deleteFiles,
@@ -65,9 +68,8 @@ Future<TorrentDeleteResult> showTorrentDeleteDialog({
                   ),
                   subtitle: Text(
                     'Permanently delete downloaded files from disk',
-                    style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
-                          color: deleteFiles ? errorColor : null,
-                        ),
+                    style: Theme.of(dialogContext).textTheme.bodySmall
+                        ?.copyWith(color: deleteFiles ? errorColor : null),
                   ),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -85,7 +87,11 @@ Future<TorrentDeleteResult> showTorrentDeleteDialog({
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_rounded, color: errorColor, size: 20),
+                        Icon(
+                          Icons.warning_rounded,
+                          color: errorColor,
+                          size: 20,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
@@ -106,14 +112,17 @@ Future<TorrentDeleteResult> showTorrentDeleteDialog({
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(
-                  TorrentDeleteResult.cancelled,
-                ),
+                onPressed: () => Navigator.of(
+                  dialogContext,
+                ).pop(TorrentDeleteResult.cancelled),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(dialogContext).pop(
-                  TorrentDeleteResult(confirmed: true, deleteFiles: deleteFiles),
+                  TorrentDeleteResult(
+                    confirmed: true,
+                    deleteFiles: deleteFiles,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: errorColor,

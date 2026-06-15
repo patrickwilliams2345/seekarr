@@ -74,13 +74,8 @@ void main() {
   });
 
   group('TorrentFile.priorityLabel', () {
-    TorrentFile withPriority(int p) => TorrentFile(
-          index: 0,
-          name: 'x',
-          size: 0,
-          progress: 0,
-          priority: p,
-        );
+    TorrentFile withPriority(int p) =>
+        TorrentFile(index: 0, name: 'x', size: 0, progress: 0, priority: p);
 
     test('0 → Do not download', () {
       expect(withPriority(0).priorityLabel, 'Do not download');

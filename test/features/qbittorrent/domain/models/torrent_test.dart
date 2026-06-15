@@ -205,7 +205,15 @@ void main() {
   });
 
   group('Torrent formatted helpers', () {
-    Torrent build({String state = 'downloading', int eta = 3600, int dl = 0, int up = 0, double progress = 0.0, int size = 0, String tracker = ''}) {
+    Torrent build({
+      String state = 'downloading',
+      int eta = 3600,
+      int dl = 0,
+      int up = 0,
+      double progress = 0.0,
+      int size = 0,
+      String tracker = '',
+    }) {
       return Torrent(
         hash: 'h',
         name: 'N',
@@ -260,8 +268,14 @@ void main() {
     });
 
     test('trackerDomain strips www. prefix', () {
-      expect(build(tracker: 'https://www.tracker.example/announce').trackerDomain, 'tracker.example');
-      expect(build(tracker: 'https://tracker.example/announce').trackerDomain, 'tracker.example');
+      expect(
+        build(tracker: 'https://www.tracker.example/announce').trackerDomain,
+        'tracker.example',
+      );
+      expect(
+        build(tracker: 'https://tracker.example/announce').trackerDomain,
+        'tracker.example',
+      );
       expect(build(tracker: '').trackerDomain, '');
       expect(build(tracker: 'not a url').trackerDomain, '');
     });

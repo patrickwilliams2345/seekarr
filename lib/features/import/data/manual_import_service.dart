@@ -92,16 +92,20 @@ class ManualImportService {
     );
   }
 
-  Future<ManualImportItem> reprocessItem({
-    required ManualImportItem item,
-    required ManualImportFixAssignment assignment,
+  Future<ManualImportCommandStatus> importItem(
+    ManualImportItem item, {
+    required ManualImportMode importMode,
   }) async {
     final response = await client.post(
-      '$_prefix/manualimport',
-      data: [item.toReprocessJson(service, assignment: assignment)],
+      '$_prefix/command',
+      data: {
+        'name': 'ManualImport',
+        'importMode': importMode.apiValue,
+        if (service == ServiceKey.lidarr) 'replaceExistingFiles': false,
+        'files': [item.toCommandFileJson(service)],
+      },
     );
-    final items = _mappedList(response.data, ManualImportItem.fromJson);
-    return items.isEmpty ? item : items.first;
+    return ManualImportCommandStatus.fromJson(stringKeyMap(response.data));
   }
 
   Future<List<ManualImportEpisode>> getEpisodes({

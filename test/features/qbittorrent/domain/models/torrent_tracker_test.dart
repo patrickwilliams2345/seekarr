@@ -42,15 +42,15 @@ void main() {
 
   group('TorrentTracker.statusLabel', () {
     TorrentTracker build(int status) => TorrentTracker(
-          url: '',
-          status: status,
-          tier: 0,
-          numPeers: 0,
-          numSeeds: 0,
-          numLeeches: 0,
-          numDownloaded: 0,
-          msg: '',
-        );
+      url: '',
+      status: status,
+      tier: 0,
+      numPeers: 0,
+      numSeeds: 0,
+      numLeeches: 0,
+      numDownloaded: 0,
+      msg: '',
+    );
 
     test('returns expected labels per status code', () {
       expect(build(0).statusLabel, 'Disabled');

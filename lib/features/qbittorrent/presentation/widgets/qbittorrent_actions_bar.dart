@@ -12,10 +12,7 @@ class QbittorrentActionsBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: const [
-        AddTorrentButton(),
-        QbittorrentOverflowMenu(),
-      ],
+      children: const [AddTorrentButton(), QbittorrentOverflowMenu()],
     );
   }
 }
@@ -87,18 +84,18 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
 
   void _showSnack(BuildContext context, String message) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

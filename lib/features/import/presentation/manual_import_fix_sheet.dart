@@ -527,13 +527,13 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
     final notifier = ref.read(manualImportFlowProvider.notifier);
     final beforeError = ref.read(manualImportFlowProvider).error;
     if (widget.isBulk) {
-      await notifier.reprocessItems({
+      await notifier.applyBulkFixAssignments({
         for (final item in widget.bulkItems) item: _assignmentFor(item, match),
       });
     } else {
       final item = widget.item;
       if (item != null) {
-        await notifier.reprocessItem(item, _assignmentFor(item, match));
+        await notifier.applyFixAssignment(item, _assignmentFor(item, match));
       }
     }
 

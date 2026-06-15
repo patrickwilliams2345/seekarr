@@ -76,11 +76,8 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
             child: _buildTorrentList(context, torrentsAsync, selectedHashes),
           ),
           TorrentSelectionBar(
-            onConfirmDelete: () => confirmDeleteTorrents(
-              context,
-              ref,
-              selectedHashes,
-            ),
+            onConfirmDelete: () =>
+                confirmDeleteTorrents(context, ref, selectedHashes),
           ),
         ],
       ),

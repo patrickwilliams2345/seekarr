@@ -46,9 +46,9 @@ class TorrentSelectionBar extends ConsumerWidget {
                     await service.resumeTorrents(hashes);
                     ref.invalidate(torrentsProvider);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Resumed')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('Resumed')));
                     }
                   } catch (e) {
                     if (context.mounted) {
@@ -80,9 +80,9 @@ class TorrentSelectionBar extends ConsumerWidget {
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed: $e')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
                     }
                   }
                 },
@@ -159,9 +159,9 @@ Future<bool> confirmDeleteTorrents(
     return true;
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
     }
     return false;
   }

@@ -79,9 +79,7 @@ class _ScriptableAdapter implements HttpClientAdapter {
     final status = callIndex < script.length ? script[callIndex] : script.last;
     callIndex++;
     final isLogin = options.path == '/api/v2/auth/login';
-    final body = isLogin
-        ? (status == 200 ? 'Ok.' : 'Fails.')
-        : 'v4.6.5';
+    final body = isLogin ? (status == 200 ? 'Ok.' : 'Fails.') : 'v4.6.5';
     final bytes = utf8.encode(body);
     return ResponseBody.fromBytes(
       bytes,
@@ -208,15 +206,10 @@ void main() {
         // 2nd call: login (forced by interceptor) → 200 Ok.
         // 3rd call: data retry → 403 → surfaced.
         // No further calls — the interceptor must stop after one retry.
-        final adapter = _ScriptableAdapter(
-          script: [403, 200, 403, 403, 403],
-        );
+        final adapter = _ScriptableAdapter(script: [403, 200, 403, 403, 403]);
         final c = _client(adapter, user: 'admin', pw: 'adminadmin');
 
-        await expectLater(
-          c.getVersion(),
-          throwsA(isA<DioException>()),
-        );
+        await expectLater(c.getVersion(), throwsA(isA<DioException>()));
 
         final dataCalls = adapter.requests
             .where((r) => r.path == '/api/v2/app/version')
@@ -243,70 +236,49 @@ void main() {
       },
     );
 
-    test(
-      'retries once on 403, succeeds when retry returns 200',
-      () async {
-        // 1st call: data → 403; 2nd call: login → 200; 3rd call: data → 200.
-        final adapter = _ScriptableAdapter(
-          script: [403, 200, 200],
-        );
-        final c = _client(adapter, user: 'admin', pw: 'adminadmin');
+    test('retries once on 403, succeeds when retry returns 200', () async {
+      // 1st call: data → 403; 2nd call: login → 200; 3rd call: data → 200.
+      final adapter = _ScriptableAdapter(script: [403, 200, 200]);
+      final c = _client(adapter, user: 'admin', pw: 'adminadmin');
 
-        final version = await c.getVersion();
-        expect(version, 'v4.6.5');
-        expect(adapter.callIndex, 3);
-        c.close();
-      },
-    );
+      final version = await c.getVersion();
+      expect(version, 'v4.6.5');
+      expect(adapter.callIndex, 3);
+      c.close();
+    });
 
-    test(
-      'does not retry on 403 when no credentials are configured',
-      () async {
-        // Without credentials authenticate() short-circuits to true, so
-        // the interceptor must not even attempt a retry.
-        final adapter = _ScriptableAdapter(
-          script: [403, 200, 200],
-        );
-        final c = _client(adapter);
+    test('does not retry on 403 when no credentials are configured', () async {
+      // Without credentials authenticate() short-circuits to true, so
+      // the interceptor must not even attempt a retry.
+      final adapter = _ScriptableAdapter(script: [403, 200, 200]);
+      final c = _client(adapter);
 
-        await expectLater(
-          c.getVersion(),
-          throwsA(isA<DioException>()),
-        );
-        expect(adapter.callIndex, 1);
-        c.close();
-      },
-    );
+      await expectLater(c.getVersion(), throwsA(isA<DioException>()));
+      expect(adapter.callIndex, 1);
+      c.close();
+    });
 
-    test(
-      'does not loop when login itself returns 403',
-      () async {
-        // 1st call: data → 403; 2nd call: login → 403.
-        // The interceptor should call login once, see failure, and surface
-        // the original 403 without retrying the data call.
-        final adapter = _ScriptableAdapter(
-          script: [403, 403, 403, 403],
-        );
-        final c = _client(adapter, user: 'admin', pw: 'wrong');
+    test('does not loop when login itself returns 403', () async {
+      // 1st call: data → 403; 2nd call: login → 403.
+      // The interceptor should call login once, see failure, and surface
+      // the original 403 without retrying the data call.
+      final adapter = _ScriptableAdapter(script: [403, 403, 403, 403]);
+      final c = _client(adapter, user: 'admin', pw: 'wrong');
 
-        await expectLater(
-          c.getVersion(),
-          throwsA(isA<DioException>()),
-        );
-        final dataCalls = adapter.requests
-            .where((r) => r.path == '/api/v2/app/version')
-            .toList();
-        final loginCalls = adapter.requests
-            .where((r) => r.path == '/api/v2/auth/login')
-            .toList();
-        expect(
-          dataCalls.length,
-          1,
-          reason: 'must not retry the data call when login itself fails',
-        );
-        expect(loginCalls.length, 1);
-        c.close();
-      },
-    );
+      await expectLater(c.getVersion(), throwsA(isA<DioException>()));
+      final dataCalls = adapter.requests
+          .where((r) => r.path == '/api/v2/app/version')
+          .toList();
+      final loginCalls = adapter.requests
+          .where((r) => r.path == '/api/v2/auth/login')
+          .toList();
+      expect(
+        dataCalls.length,
+        1,
+        reason: 'must not retry the data call when login itself fails',
+      );
+      expect(loginCalls.length, 1);
+      c.close();
+    });
   });
 }

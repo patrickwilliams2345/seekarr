@@ -112,10 +112,7 @@ class QbittorrentService {
   }) async {
     await _client.post(
       '/api/v2/torrents/delete',
-      data: {
-        'hashes': hashes.join('|'),
-        'deleteFiles': deleteFiles.toString(),
-      },
+      data: {'hashes': hashes.join('|'), 'deleteFiles': deleteFiles.toString()},
     );
   }
 
@@ -173,10 +170,7 @@ class QbittorrentService {
   ) async {
     await _client.post(
       '/api/v2/torrents/setDownloadLimit',
-      data: {
-        'hashes': hashes.join('|'),
-        'limit': limitBytesPerSecond,
-      },
+      data: {'hashes': hashes.join('|'), 'limit': limitBytesPerSecond},
     );
   }
 
@@ -186,10 +180,7 @@ class QbittorrentService {
   ) async {
     await _client.post(
       '/api/v2/torrents/setUploadLimit',
-      data: {
-        'hashes': hashes.join('|'),
-        'limit': limitBytesPerSecond,
-      },
+      data: {'hashes': hashes.join('|'), 'limit': limitBytesPerSecond},
     );
   }
 
@@ -211,19 +202,12 @@ class QbittorrentService {
   }) async {
     await _client.post(
       '/api/v2/torrents/filePrio',
-      data: {
-        'hash': hash,
-        'id': fileIndexes.join('|'),
-        'priority': priority,
-      },
+      data: {'hash': hash, 'id': fileIndexes.join('|'), 'priority': priority},
     );
   }
 
   Future<void> recheck(String hash) async {
-    await _client.post(
-      '/api/v2/torrents/recheck',
-      data: {'hashes': hash},
-    );
+    await _client.post('/api/v2/torrents/recheck', data: {'hashes': hash});
   }
 
   Future<void> reannounce(List<String> hashes) async {

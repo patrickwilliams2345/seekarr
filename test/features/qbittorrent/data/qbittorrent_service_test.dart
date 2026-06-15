@@ -93,8 +93,9 @@ class _StubAdapter implements HttpClientAdapter {
       if (eq < 0) {
         out[Uri.decodeComponent(pair)] = '';
       } else {
-        out[Uri.decodeComponent(pair.substring(0, eq))] =
-            Uri.decodeComponent(pair.substring(eq + 1));
+        out[Uri.decodeComponent(pair.substring(0, eq))] = Uri.decodeComponent(
+          pair.substring(eq + 1),
+        );
       }
     }
     return out;
@@ -113,24 +114,27 @@ QbittorrentService _service(_StubAdapter adapter) {
   return QbittorrentService(client);
 }
 
-Map<String, dynamic> _torrentJson({String hash = 'aaa', String state = 'downloading'}) => {
-      'hash': hash,
-      'name': 'A',
-      'size': 100,
-      'progress': 0.5,
-      'state': state,
-      'dlspeed': 1024,
-      'upspeed': 0,
-      'eta': 60,
-      'category': '',
-      'tracker': '',
-      'tags': <String>[],
-      'ratio': 1.0,
-      'added_on': 0,
-      'completed': 0,
-      'num_leechs': 0,
-      'num_seeds': 0,
-    };
+Map<String, dynamic> _torrentJson({
+  String hash = 'aaa',
+  String state = 'downloading',
+}) => {
+  'hash': hash,
+  'name': 'A',
+  'size': 100,
+  'progress': 0.5,
+  'state': state,
+  'dlspeed': 1024,
+  'upspeed': 0,
+  'eta': 60,
+  'category': '',
+  'tracker': '',
+  'tags': <String>[],
+  'ratio': 1.0,
+  'added_on': 0,
+  'completed': 0,
+  'num_leechs': 0,
+  'num_seeds': 0,
+};
 
 void main() {
   group('QbittorrentService', () {
@@ -221,14 +225,15 @@ void main() {
     });
 
     test('setCategory sends hashes and category', () async {
-      final adapter = _StubAdapter()..setText('/api/v2/torrents/setCategory', '');
+      final adapter = _StubAdapter()
+        ..setText('/api/v2/torrents/setCategory', '');
       final service = _service(adapter);
 
       await service.setCategory(['a', 'b'], 'linux');
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'a|b', 'category': 'linux'},
-      );
+      expect(adapter.requestBodies.last, {
+        'hashes': 'a|b',
+        'category': 'linux',
+      });
     });
 
     test('addTags and removeTags join tags with comma', () async {
@@ -238,16 +243,10 @@ void main() {
       final service = _service(adapter);
 
       await service.addTags(['h1'], ['a', 'b']);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h1', 'tags': 'a,b'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h1', 'tags': 'a,b'});
 
       await service.removeTags(['h2'], ['a']);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h2', 'tags': 'a'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h2', 'tags': 'a'});
     });
 
     test('setDownloadLimit and setUploadLimit send limit in bytes', () async {
@@ -257,33 +256,22 @@ void main() {
       final service = _service(adapter);
 
       await service.setDownloadLimit(['h'], 1024);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h', 'limit': '1024'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h', 'limit': '1024'});
 
       await service.setUploadLimit(['h'], 2048);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h', 'limit': '2048'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h', 'limit': '2048'});
     });
 
     test('setForceStart posts value as true/false string', () async {
-      final adapter = _StubAdapter()..setText('/api/v2/torrents/setForceStart', '');
+      final adapter = _StubAdapter()
+        ..setText('/api/v2/torrents/setForceStart', '');
       final service = _service(adapter);
 
       await service.setForceStart(['h'], true);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h', 'value': 'true'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h', 'value': 'true'});
 
       await service.setForceStart(['h'], false);
-      expect(
-        adapter.requestBodies.last,
-        {'hashes': 'h', 'value': 'false'},
-      );
+      expect(adapter.requestBodies.last, {'hashes': 'h', 'value': 'false'});
     });
 
     test('toggleAlternativeSpeedLimits posts to toggle endpoint', () async {
@@ -318,7 +306,13 @@ void main() {
     test('getTorrentFiles parses array payload', () async {
       final adapter = _StubAdapter()
         ..setJson('/api/v2/torrents/files', [
-          {'index': 0, 'name': 'a.iso', 'size': 10, 'progress': 0.5, 'priority': 1},
+          {
+            'index': 0,
+            'name': 'a.iso',
+            'size': 10,
+            'progress': 0.5,
+            'priority': 1,
+          },
         ]);
       final service = _service(adapter);
 
@@ -350,41 +344,40 @@ void main() {
       expect(trackers.first.numSeeds, 2);
     });
 
-    test('addTorrentFiles sends multipart with each file and optional fields', () async {
-      final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');
-      final service = _service(adapter);
+    test(
+      'addTorrentFiles sends multipart with each file and optional fields',
+      () async {
+        final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');
+        final service = _service(adapter);
 
-      final f1 = MultipartFile.fromBytes(
-        [1, 2, 3],
-        filename: 'a.torrent',
-      );
-      final f2 = MultipartFile.fromBytes(
-        [4, 5, 6],
-        filename: 'b.torrent',
-      );
-      await service.addTorrentFiles(
-        [f1, f2],
-        category: 'movies',
-        savePath: '/dl',
-      );
+        final f1 = MultipartFile.fromBytes([1, 2, 3], filename: 'a.torrent');
+        final f2 = MultipartFile.fromBytes([4, 5, 6], filename: 'b.torrent');
+        await service.addTorrentFiles(
+          [f1, f2],
+          category: 'movies',
+          savePath: '/dl',
+        );
 
-      final req = adapter.requests.last;
-      expect(req.path, '/api/v2/torrents/add');
-      expect(req.method, 'POST');
-      expect(
-        req.headers[Headers.contentTypeHeader],
-        contains(Headers.multipartFormDataContentType.toString()),
-      );
-      // The body bytes won't roundtrip cleanly through `_StubAdapter` for
-      // multipart (it tries to URL-decode them). Just confirm the request
-      // hit the right endpoint with multipart content type.
-    });
+        final req = adapter.requests.last;
+        expect(req.path, '/api/v2/torrents/add');
+        expect(req.method, 'POST');
+        expect(
+          req.headers[Headers.contentTypeHeader],
+          contains(Headers.multipartFormDataContentType.toString()),
+        );
+        // The body bytes won't roundtrip cleanly through `_StubAdapter` for
+        // multipart (it tries to URL-decode them). Just confirm the request
+        // hit the right endpoint with multipart content type.
+      },
+    );
 
     test('addTorrentFiles omits empty optional fields', () async {
       final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');
       final service = _service(adapter);
 
-      await service.addTorrentFiles([MultipartFile.fromBytes([1], filename: 'a.torrent')]);
+      await service.addTorrentFiles([
+        MultipartFile.fromBytes([1], filename: 'a.torrent'),
+      ]);
       expect(adapter.requests.last.path, '/api/v2/torrents/add');
     });
 
@@ -392,11 +385,7 @@ void main() {
       final adapter = _StubAdapter()..setText('/api/v2/torrents/filePrio', '');
       final service = _service(adapter);
 
-      await service.filePrio(
-        hash: 'h1',
-        fileIndexes: [0, 2, 4],
-        priority: 6,
-      );
+      await service.filePrio(hash: 'h1', fileIndexes: [0, 2, 4], priority: 6);
       final body = adapter.requestBodies.last;
       expect(body['hash'], 'h1');
       expect(body['id'], '0|2|4');
@@ -413,7 +402,8 @@ void main() {
     });
 
     test('reannounce joins hashes with pipe', () async {
-      final adapter = _StubAdapter()..setText('/api/v2/torrents/reannounce', '');
+      final adapter = _StubAdapter()
+        ..setText('/api/v2/torrents/reannounce', '');
       final service = _service(adapter);
 
       await service.reannounce(['a', 'b']);

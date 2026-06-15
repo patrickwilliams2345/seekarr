@@ -118,8 +118,11 @@ class TorrentFilterPillsRow extends ConsumerWidget {
                           textTheme: textTheme,
                           onSelected: (value) {
                             ref
-                                .read(torrentCategoryFilterProvider.notifier)
-                                .state = value;
+                                    .read(
+                                      torrentCategoryFilterProvider.notifier,
+                                    )
+                                    .state =
+                                value;
                           },
                         ),
                         const SizedBox(width: AppSpacing.xs),
@@ -145,8 +148,9 @@ class TorrentFilterPillsRow extends ConsumerWidget {
                           textTheme: textTheme,
                           onSelected: (value) {
                             ref
-                                .read(torrentTrackerFilterProvider.notifier)
-                                .state = value;
+                                    .read(torrentTrackerFilterProvider.notifier)
+                                    .state =
+                                value;
                           },
                         ),
                       ],

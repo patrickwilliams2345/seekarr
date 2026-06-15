@@ -61,10 +61,12 @@ class AddTorrentButton extends ConsumerWidget {
                       if (pickedFilesNotifier.value.isNotEmpty) return null;
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return 'Required';
-                      final isMagnet = value.toLowerCase().startsWith('magnet:');
+                      final isMagnet = value.toLowerCase().startsWith(
+                        'magnet:',
+                      );
                       final isHttp =
                           value.toLowerCase().startsWith('http://') ||
-                              value.toLowerCase().startsWith('https://');
+                          value.toLowerCase().startsWith('https://');
                       if (!isMagnet && !isHttp) {
                         return 'Enter a magnet link or an http(s) URL';
                       }
@@ -79,19 +81,23 @@ class AddTorrentButton extends ConsumerWidget {
                         return Align(
                           alignment: Alignment.centerLeft,
                           child: OutlinedButton.icon(
-                            icon: const Icon(Icons.attach_file_rounded, size: 18),
+                            icon: const Icon(
+                              Icons.attach_file_rounded,
+                              size: 18,
+                            ),
                             label: const Text('Pick .torrent files'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.qbittorrent,
                               side: BorderSide(color: AppColors.qbittorrent),
                             ),
                             onPressed: () async {
-                              final result = await FilePicker.platform.pickFiles(
-                                allowMultiple: true,
-                                type: FileType.custom,
-                                allowedExtensions: const ['torrent'],
-                                withData: true,
-                              );
+                              final result = await FilePicker.platform
+                                  .pickFiles(
+                                    allowMultiple: true,
+                                    type: FileType.custom,
+                                    allowedExtensions: const ['torrent'],
+                                    withData: true,
+                                  );
                               if (result != null && result.files.isNotEmpty) {
                                 pickedFilesNotifier.value = result.files;
                                 setModalState(() {});
@@ -123,7 +129,10 @@ class AddTorrentButton extends ConsumerWidget {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.close_rounded, size: 18),
+                                    icon: const Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                    ),
                                     tooltip: 'Remove',
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () {
@@ -145,12 +154,13 @@ class AddTorrentButton extends ConsumerWidget {
                               foregroundColor: AppColors.qbittorrent,
                             ),
                             onPressed: () async {
-                              final result = await FilePicker.platform.pickFiles(
-                                allowMultiple: true,
-                                type: FileType.custom,
-                                allowedExtensions: const ['torrent'],
-                                withData: true,
-                              );
+                              final result = await FilePicker.platform
+                                  .pickFiles(
+                                    allowMultiple: true,
+                                    type: FileType.custom,
+                                    allowedExtensions: const ['torrent'],
+                                    withData: true,
+                                  );
                               if (result != null && result.files.isNotEmpty) {
                                 pickedFilesNotifier.value = [
                                   ...files,

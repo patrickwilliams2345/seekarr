@@ -181,9 +181,9 @@ class _InfoTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to set category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to set category: $e')));
       }
     }
   }
@@ -193,10 +193,7 @@ class _InfoTab extends ConsumerWidget {
     WidgetRef ref,
     Torrent torrent,
   ) async {
-    final result = await showEditTagsDialog(
-      context,
-      currentTags: torrent.tags,
-    );
+    final result = await showEditTagsDialog(context, currentTags: torrent.tags);
     if (result == null) return;
     final newSet = result.toSet();
     final oldSet = torrent.tags.toSet();
@@ -215,15 +212,15 @@ class _InfoTab extends ConsumerWidget {
       ref.invalidate(torrentsProvider);
       ref.invalidate(allTorrentsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tags updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Tags updated')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update tags: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update tags: $e')));
       }
     }
   }
@@ -334,11 +331,8 @@ class _FilesTab extends ConsumerWidget {
         return ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: files.length,
-          itemBuilder: (context, index) => _FileRow(
-            file: files[index],
-            index: index,
-            hash: hash,
-          ),
+          itemBuilder: (context, index) =>
+              _FileRow(file: files[index], index: index, hash: hash),
         );
       },
     );
@@ -350,11 +344,7 @@ class _FileRow extends ConsumerWidget {
   final int index;
   final String hash;
 
-  const _FileRow({
-    required this.file,
-    required this.index,
-    required this.hash,
-  });
+  const _FileRow({required this.file, required this.index, required this.hash});
 
   static const _priorityLabels = <int, String>{
     0: 'Do not download',
@@ -443,16 +433,14 @@ class _FileRow extends ConsumerWidget {
       ref.invalidate(torrentFilesProvider(hash));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Priority set to ${_priorityLabels[picked]}'),
-          ),
+          SnackBar(content: Text('Priority set to ${_priorityLabels[picked]}')),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to set priority: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to set priority: $e')));
       }
     }
   }
@@ -584,15 +572,15 @@ class _ActionsTab extends ConsumerWidget {
               await service.resumeTorrents([torrent.hash]);
               ref.invalidate(torrentsProvider);
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Resumed')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Resumed')));
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to resume: $e')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed to resume: $e')));
               }
             }
           },
@@ -611,15 +599,15 @@ class _ActionsTab extends ConsumerWidget {
               await service.setForceStart([torrent.hash], true);
               ref.invalidate(torrentsProvider);
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Force started')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Force started')));
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed: $e')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
               }
             }
           },
@@ -638,15 +626,15 @@ class _ActionsTab extends ConsumerWidget {
               await service.pauseTorrents([torrent.hash]);
               ref.invalidate(torrentsProvider);
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Paused')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Paused')));
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to pause: $e')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Failed to pause: $e')));
               }
             }
           },
@@ -690,23 +678,13 @@ class _ActionsTab extends ConsumerWidget {
         _SectionLabel('Speed limits (this torrent)'),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _setLimit(
-            context,
-            ref,
-            torrent,
-            isDownload: true,
-          ),
+          onPressed: () => _setLimit(context, ref, torrent, isDownload: true),
           icon: const Icon(Icons.south_rounded, size: 16),
           label: const Text('Download limit'),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _setLimit(
-            context,
-            ref,
-            torrent,
-            isDownload: false,
-          ),
+          onPressed: () => _setLimit(context, ref, torrent, isDownload: false),
           icon: const Icon(Icons.north_rounded, size: 16),
           label: const Text('Upload limit'),
         ),
@@ -745,15 +723,15 @@ class _ActionsTab extends ConsumerWidget {
     try {
       await service.recheck(torrent.hash);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recheck started')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recheck started')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to recheck: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to recheck: $e')));
       }
     }
   }
@@ -773,9 +751,9 @@ class _ActionsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reannounce: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to reannounce: $e')));
       }
     }
   }
@@ -820,9 +798,9 @@ class _ActionsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to set limit: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to set limit: $e')));
       }
     }
   }
@@ -839,9 +817,9 @@ class _ActionsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to toggle: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to toggle: $e')));
       }
     }
   }
@@ -860,13 +838,17 @@ class _ActionsTab extends ConsumerWidget {
       if (!context.mounted) return;
       final service = ref.read(qbittorrentServiceProvider);
       try {
-        await service.deleteTorrents([torrent.hash], deleteFiles: result.deleteFiles);
+        await service.deleteTorrents([
+          torrent.hash,
+        ], deleteFiles: result.deleteFiles);
         ref.invalidate(torrentsProvider);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                result.deleteFiles ? 'Deleted torrent and files' : 'Deleted torrent',
+                result.deleteFiles
+                    ? 'Deleted torrent and files'
+                    : 'Deleted torrent',
               ),
             ),
           );
@@ -874,9 +856,9 @@ class _ActionsTab extends ConsumerWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
         }
       }
     });

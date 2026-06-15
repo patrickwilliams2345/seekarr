@@ -40,25 +40,24 @@ Map<String, dynamic> _torrentJson({
   String category = '',
   String tracker = '',
   List<String> tags = const [],
-}) =>
-    {
-      'hash': hash,
-      'name': 'A',
-      'size': 100,
-      'progress': 0.5,
-      'state': state,
-      'dlspeed': 0,
-      'upspeed': 0,
-      'eta': 60,
-      'category': category,
-      'tracker': tracker,
-      'tags': tags,
-      'ratio': 1.0,
-      'added_on': 0,
-      'completed': 0,
-      'num_leechs': 0,
-      'num_seeds': 0,
-    };
+}) => {
+  'hash': hash,
+  'name': 'A',
+  'size': 100,
+  'progress': 0.5,
+  'state': state,
+  'dlspeed': 0,
+  'upspeed': 0,
+  'eta': 60,
+  'category': category,
+  'tracker': tracker,
+  'tags': tags,
+  'ratio': 1.0,
+  'added_on': 0,
+  'completed': 0,
+  'num_leechs': 0,
+  'num_seeds': 0,
+};
 
 ProviderContainer _container({
   SettingsModel? settings,
@@ -66,7 +65,9 @@ ProviderContainer _container({
 }) {
   final container = ProviderContainer(
     overrides: [
-      currentSettingsProvider.overrideWith((ref) => settings ?? const SettingsModel()),
+      currentSettingsProvider.overrideWith(
+        (ref) => settings ?? const SettingsModel(),
+      ),
       qbittorrentServiceProvider.overrideWith((ref) {
         final s = ref.watch(currentSettingsProvider);
         if (s.qbittorrentUrl.isEmpty) {
@@ -78,8 +79,12 @@ ProviderContainer _container({
         dio.httpClientAdapter = adapter;
         final client = QbittorrentClient(
           url: s.qbittorrentUrl,
-          username: s.qbittorrentUsername.isEmpty ? null : s.qbittorrentUsername,
-          password: s.qbittorrentPassword.isEmpty ? null : s.qbittorrentPassword,
+          username: s.qbittorrentUsername.isEmpty
+              ? null
+              : s.qbittorrentUsername,
+          password: s.qbittorrentPassword.isEmpty
+              ? null
+              : s.qbittorrentPassword,
           dio: dio,
         );
         return QbittorrentService(client);
@@ -93,10 +98,7 @@ void main() {
   group('qbittorrentServiceProvider', () {
     test('throws when URL is empty', () {
       final container = _container();
-      expect(
-        () => container.read(qbittorrentServiceProvider),
-        throwsException,
-      );
+      expect(() => container.read(qbittorrentServiceProvider), throwsException);
     });
 
     test('creates service when URL configured', () {
@@ -176,25 +178,28 @@ void main() {
   });
 
   group('torrentsProvider filters', () {
-    test('queued filter applies client-side even though api filter is all', () async {
-      final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
-        responses: {
-          '/api/v2/torrents/info': [
-            _torrentJson(hash: 'a', state: 'downloading'),
-            _torrentJson(hash: 'b', state: 'queuedDL'),
-            _torrentJson(hash: 'c', state: 'queuedUP'),
-          ],
-        },
-      );
+    test(
+      'queued filter applies client-side even though api filter is all',
+      () async {
+        final container = _container(
+          settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+          responses: {
+            '/api/v2/torrents/info': [
+              _torrentJson(hash: 'a', state: 'downloading'),
+              _torrentJson(hash: 'b', state: 'queuedDL'),
+              _torrentJson(hash: 'c', state: 'queuedUP'),
+            ],
+          },
+        );
 
-      container.read(torrentFilterProvider.notifier).state =
-          TorrentFilter.queued;
-      final torrents = await container.read(torrentsProvider.future);
+        container.read(torrentFilterProvider.notifier).state =
+            TorrentFilter.queued;
+        final torrents = await container.read(torrentsProvider.future);
 
-      expect(torrents.map((t) => t.hash), containsAll(['b', 'c']));
-      expect(torrents.map((t) => t.hash), isNot(contains('a')));
-    });
+        expect(torrents.map((t) => t.hash), containsAll(['b', 'c']));
+        expect(torrents.map((t) => t.hash), isNot(contains('a')));
+      },
+    );
 
     test('category filter is applied on top of API filter', () async {
       final container = _container(

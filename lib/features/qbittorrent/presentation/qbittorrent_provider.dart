@@ -94,9 +94,7 @@ final torrentSortProvider = StateProvider<TorrentSort>(
 
 final torrentSortReverseProvider = StateProvider<bool>((ref) => true);
 
-final torrentCategoryFilterProvider = StateProvider<String?>(
-  (ref) => null,
-);
+final torrentCategoryFilterProvider = StateProvider<String?>((ref) => null);
 
 final torrentTagFilterProvider = StateProvider<String?>((ref) => null);
 
@@ -150,7 +148,10 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final categoryFilter = ref.watch(torrentCategoryFilterProvider);
   final tagFilter = ref.watch(torrentTagFilterProvider);
   final trackerFilter = ref.watch(torrentTrackerFilterProvider);
-  final searchQuery = ref.watch(torrentSearchQueryProvider).trim().toLowerCase();
+  final searchQuery = ref
+      .watch(torrentSearchQueryProvider)
+      .trim()
+      .toLowerCase();
 
   final hasSubFilters =
       (categoryFilter != null && categoryFilter.isNotEmpty) ||
@@ -160,9 +161,7 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   // Fast path: when status filter is "All" and no sub-filters or search
   // query are active, reuse allTorrentsProvider so we don't double-fetch
   // /torrents/info.
-  if (filter == TorrentFilter.all &&
-      !hasSubFilters &&
-      searchQuery.isEmpty) {
+  if (filter == TorrentFilter.all && !hasSubFilters && searchQuery.isEmpty) {
     return await ref.watch(allTorrentsProvider.future);
   }
 
@@ -193,9 +192,7 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   }
 
   if (trackerFilter != null) {
-    torrents = torrents
-        .where((t) => t.trackerDomain == trackerFilter)
-        .toList();
+    torrents = torrents.where((t) => t.trackerDomain == trackerFilter).toList();
   }
 
   if (searchQuery.isNotEmpty) {
@@ -237,8 +234,9 @@ final transferInfoProvider = FutureProvider<TransferInfo>((ref) async {
   return service.getTransferInfo();
 });
 
-final selectedTorrentHashesProvider =
-    StateProvider.autoDispose<Set<String>>((ref) => {});
+final selectedTorrentHashesProvider = StateProvider.autoDispose<Set<String>>(
+  (ref) => {},
+);
 
 final torrentPollingEnabledProvider = StateProvider<bool>((ref) => true);
 
@@ -253,8 +251,10 @@ final torrentPollingProvider = Provider.autoDispose<void>((ref) {
   ref.onDispose(() => timer.cancel());
 });
 
-final torrentDetailPollingProvider = Provider.autoDispose
-    .family<void, String>((ref, hash) {
+final torrentDetailPollingProvider = Provider.autoDispose.family<void, String>((
+  ref,
+  hash,
+) {
   // The underlying QbittorrentScreen keeps running torrentPollingProvider
   // (which already invalidates allTorrentsProvider / torrentsProvider /
   // transferInfoProvider). Here we only refresh the detail-scoped
