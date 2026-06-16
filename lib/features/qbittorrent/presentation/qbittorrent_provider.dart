@@ -8,6 +8,7 @@ import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
@@ -229,6 +230,12 @@ final torrentTrackersProvider =
       return service.getTorrentTrackers(hash);
     });
 
+final torrentPropertiesProvider =
+    FutureProvider.family<TorrentProperties, String>((ref, hash) async {
+      final service = ref.watch(qbittorrentServiceProvider);
+      return service.getTorrentProperties(hash);
+    });
+
 final transferInfoProvider = FutureProvider<TransferInfo>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   return service.getTransferInfo();
@@ -263,6 +270,7 @@ final torrentDetailPollingProvider = Provider.autoDispose.family<void, String>((
     ref.invalidate(qbittorrentTorrentsProvider(hash));
     ref.invalidate(torrentFilesProvider(hash));
     ref.invalidate(torrentTrackersProvider(hash));
+    ref.invalidate(torrentPropertiesProvider(hash));
   });
   ref.onDispose(() => timer.cancel());
 });

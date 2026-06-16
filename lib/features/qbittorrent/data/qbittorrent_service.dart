@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/transfer_info.dart';
 
@@ -85,6 +86,17 @@ class QbittorrentService {
         .cast<Map<String, dynamic>>()
         .map(TorrentTracker.fromJson)
         .toList(growable: false);
+  }
+
+  /// Per-torrent detail (the WebUI General tab). Lets transport / 4xx errors
+  /// propagate so the family provider's `AsyncValue.error` is the right
+  /// signal — the UI's `_PropRow` renders "—" per cell on `loading`/`error`.
+  Future<TorrentProperties> getTorrentProperties(String hash) async {
+    final response = await _client.get(
+      '/api/v2/torrents/properties',
+      queryParameters: {'hash': hash},
+    );
+    return TorrentProperties.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TransferInfo> getTransferInfo() async {

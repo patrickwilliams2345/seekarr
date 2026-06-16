@@ -84,6 +84,27 @@ class Torrent {
   final int leechers;
   final int seeders;
 
+  // Optional fields from `/torrents/info` (mirrors the qB WebUI General tab).
+  // All defaulted so existing tests/fixtures that only set the original 16
+  // fields keep passing unchanged. -1 sentinels follow qB's "no limit"
+  // convention; UI rendering decisions live in the property model.
+  final String contentPath;
+  final int dlLimit;
+  final int upLimit;
+  final int lastActivity;
+  final int seedingTime;
+  final int timeActive;
+  final int downloaded;
+  final int uploaded;
+  final double availability;
+  final bool isPrivate;
+  final bool forceStart;
+  final bool superSeeding;
+  final String magnetUri;
+  final double maxRatio;
+  final double ratioLimit;
+  final int maxSeedingTime;
+
   const Torrent({
     required this.hash,
     required this.name,
@@ -102,6 +123,22 @@ class Torrent {
     required this.completed,
     required this.leechers,
     required this.seeders,
+    this.contentPath = '',
+    this.dlLimit = -1,
+    this.upLimit = -1,
+    this.lastActivity = 0,
+    this.seedingTime = 0,
+    this.timeActive = 0,
+    this.downloaded = 0,
+    this.uploaded = 0,
+    this.availability = 1.0,
+    this.isPrivate = false,
+    this.forceStart = false,
+    this.superSeeding = false,
+    this.magnetUri = '',
+    this.maxRatio = -1,
+    this.ratioLimit = -1,
+    this.maxSeedingTime = -1,
   });
 
   factory Torrent.fromJson(Map<String, dynamic> json) {
@@ -123,6 +160,22 @@ class Torrent {
       completed: parseInt(json['completed']),
       leechers: parseInt(json['num_leechs']),
       seeders: parseInt(json['num_seeds']),
+      contentPath: json['content_path'] as String? ?? '',
+      dlLimit: parseInt(json['dl_limit']),
+      upLimit: parseInt(json['up_limit']),
+      lastActivity: parseInt(json['last_activity']),
+      seedingTime: parseInt(json['seeding_time']),
+      timeActive: parseInt(json['time_active']),
+      downloaded: parseInt(json['downloaded']),
+      uploaded: parseInt(json['uploaded']),
+      availability: parseDouble(json['availability']),
+      isPrivate: parseBool(json['is_private']),
+      forceStart: parseBool(json['force_start']),
+      superSeeding: parseBool(json['super_seeding']),
+      magnetUri: json['magnet_uri'] as String? ?? '',
+      maxRatio: parseDouble(json['max_ratio']),
+      ratioLimit: parseDouble(json['ratio_limit']),
+      maxSeedingTime: parseInt(json['max_seeding_time']),
     );
   }
 

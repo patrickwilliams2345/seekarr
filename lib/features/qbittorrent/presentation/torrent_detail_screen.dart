@@ -7,8 +7,10 @@ import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
@@ -112,7 +114,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _InfoTab(torrent: torrent),
+            _InfoTab(torrent: torrent, hash: widget.hash),
             _FilesTab(hash: widget.hash),
             _TrackersTab(hash: widget.hash),
             _ActionsTab(torrent: torrent),
@@ -125,14 +127,16 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
 
 class _InfoTab extends ConsumerWidget {
   final Torrent torrent;
+  final String hash;
 
-  const _InfoTab({required this.torrent});
+  const _InfoTab({required this.torrent, required this.hash});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        _SectionLabel('Transfer'),
         _InfoRow(label: 'Name', value: torrent.name),
         _InfoRow(label: 'Size', value: torrent.sizeFormatted),
         _InfoRow(label: 'Progress', value: torrent.progressFormatted),
@@ -140,6 +144,11 @@ class _InfoTab extends ConsumerWidget {
         _InfoRow(label: 'Download Speed', value: torrent.dlSpeedFormatted),
         _InfoRow(label: 'Upload Speed', value: torrent.upSpeedFormatted),
         _InfoRow(label: 'ETA', value: torrent.etaFormatted),
+        _InfoRow(label: 'Downloaded', value: formatSize(torrent.downloaded)),
+        _InfoRow(label: 'Uploaded', value: formatSize(torrent.uploaded)),
+        _InfoRow(label: 'Share Ratio', value: torrent.ratio.toStringAsFixed(2)),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('Organization'),
         _EditableInfoRow(
           label: 'Category',
           value: torrent.category,
@@ -150,9 +159,103 @@ class _InfoTab extends ConsumerWidget {
           value: torrent.tags.join(', '),
           onTap: () => _editTags(context, ref, torrent),
         ),
-        _InfoRow(label: 'Ratio', value: torrent.ratio.toStringAsFixed(2)),
-        _InfoRow(label: 'Seeders', value: '${torrent.seeders}'),
-        _InfoRow(label: 'Leechers', value: '${torrent.leechers}'),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('Activity'),
+        _PropRow(
+          label: 'Time Active',
+          hash: hash,
+          valueOf: (p) => p.timeActiveFormatted,
+        ),
+        _PropRow(
+          label: 'Seeded for',
+          hash: hash,
+          valueOf: (p) => p.seededForFormatted,
+        ),
+        _PropRow(
+          label: 'Avg Download Speed',
+          hash: hash,
+          valueOf: (p) => p.dlSpeedAvgFormatted,
+        ),
+        _PropRow(
+          label: 'Avg Upload Speed',
+          hash: hash,
+          valueOf: (p) => p.upSpeedAvgFormatted,
+        ),
+        _InfoRow(
+          label: 'Last Activity',
+          value: formatEpochDate(torrent.lastActivity),
+        ),
+        _PropRow(
+          label: 'Last Seen',
+          hash: hash,
+          valueOf: (p) => p.lastSeenFormatted,
+        ),
+        _PropRow(
+          label: 'Reannounce in',
+          hash: hash,
+          valueOf: (p) => p.reannounceFormatted,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('Limits'),
+        _PropRow(
+          label: 'Download Limit',
+          hash: hash,
+          valueOf: (p) => p.dlLimitFormatted,
+        ),
+        _PropRow(
+          label: 'Upload Limit',
+          hash: hash,
+          valueOf: (p) => p.upLimitFormatted,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('Trackers & Peers'),
+        _PropRow(
+          label: 'Connections',
+          hash: hash,
+          valueOf: (p) => p.connectionsFormatted,
+        ),
+        _PropRow(label: 'Peers', hash: hash, valueOf: (p) => p.peersFormatted),
+        _PropRow(label: 'Seeds', hash: hash, valueOf: (p) => p.seedsFormatted),
+        _PropRow(
+          label: 'Pieces',
+          hash: hash,
+          valueOf: (p) => p.piecesFormatted,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('File info'),
+        _PropRow(
+          label: 'Save Path',
+          hash: hash,
+          valueOf: (p) => p.savePathFormatted,
+        ),
+        _PropRow(
+          label: 'Created By',
+          hash: hash,
+          valueOf: (p) => p.createdByFormatted,
+        ),
+        _PropRow(
+          label: 'Comment',
+          hash: hash,
+          valueOf: (p) => p.commentFormatted,
+        ),
+        _PropRow(
+          label: 'Piece Size',
+          hash: hash,
+          valueOf: (p) => p.pieceSizeFormatted,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SectionLabel('Dates'),
+        _InfoRow(label: 'Added On', value: formatEpochDate(torrent.addedOn)),
+        _PropRow(
+          label: 'Completed On',
+          hash: hash,
+          valueOf: (p) => p.completionDateFormatted,
+        ),
+        _PropRow(
+          label: 'Created On',
+          hash: hash,
+          valueOf: (p) => p.creationDateFormatted,
+        ),
       ],
     );
   }
@@ -308,6 +411,27 @@ class _EditableInfoRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PropRow extends ConsumerWidget {
+  final String label;
+  final String hash;
+  final String Function(TorrentProperties) valueOf;
+
+  const _PropRow({
+    required this.label,
+    required this.hash,
+    required this.valueOf,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final props = ref.watch(torrentPropertiesProvider(hash));
+    return props.maybeWhen(
+      data: (p) => _InfoRow(label: label, value: valueOf(p)),
+      orElse: () => _InfoRow(label: label, value: '—'),
     );
   }
 }

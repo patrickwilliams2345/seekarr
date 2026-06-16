@@ -6,7 +6,7 @@
 [![Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/matthwlabs)
 
 A Flutter app for managing your self-hosted media stack from anywhere.  
-Supports **Seerr**, **Radarr**, **Sonarr**, and **Lidarr**.
+Supports **Seerr**, **Radarr**, **Sonarr**, **Lidarr**, and **qBittorrent**.
 
 ## Support
 
@@ -73,6 +73,10 @@ If you find Seekarr useful, consider supporting me with a donation — it helps 
 - **Movies** — View and manage your Radarr movie library
 - **TV Series** — View and manage your Sonarr TV series library
 - **Music** — View and manage your Lidarr music library
+- **Torrents** — Manage qBittorrent torrents from anywhere
+  - Filter by status (all / downloading / seeding / completed / paused / queued) plus category, tag, tracker, and free-text sub-filters
+  - Detail screen with **Info / Files / Trackers / Actions** tabs and 3s live polling
+  - Mutate: pause, resume, force-start, force-recheck, reannounce, set per-torrent speed limits, edit category and tags, delete (with optional file removal)
 - **Search** — Cross-service search with always-visible search bars
 - **Activity** — Comprehensive task monitoring
   - Queue, History, and Blocklist with sticky segmented navigation and full pagination
@@ -92,7 +96,7 @@ If you find Seekarr useful, consider supporting me with a donation — it helps 
 - Flutter SDK compatible with Dart `^3.10.0`
 - For **iOS / macOS**: Xcode
 - For **Android**: Android Studio and the Android SDK
-- At least one running self-hosted service: Seerr, Radarr, Sonarr, or Lidarr
+- At least one running self-hosted service: Seerr, Radarr, Sonarr, Lidarr, or qBittorrent
 
 ### Installation
 
@@ -115,6 +119,7 @@ Seekarr ships with no default credentials. After launching the app, open **Setti
 - **Radarr** — Base URL + API key
 - **Sonarr** — Base URL + API key
 - **Lidarr** — Base URL + API key
+- **qBittorrent** — Base URL + Username + Password (uses qB's WebUI v2 form login; no API key)
 - Region preferences (where applicable)
 
 API keys are stored securely on the device using `flutter_secure_storage` and are never transmitted outside your local network.
@@ -160,6 +165,7 @@ lib/
     ├── discover/
     ├── movies/
     ├── music/
+    ├── qbittorrent/
     ├── search/
     ├── series/
     └── settings/

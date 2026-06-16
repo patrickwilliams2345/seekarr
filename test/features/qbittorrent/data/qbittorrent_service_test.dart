@@ -345,6 +345,78 @@ void main() {
     });
 
     test(
+      'getTorrentProperties parses object payload and sends hash query param',
+      () async {
+        final adapter = _StubAdapter()
+          ..setJson('/api/v2/torrents/properties', {
+            'save_path': '/downloads/Ubuntu',
+            'creation_date': 1700000000,
+            'piece_size': 32768,
+            'comment': 'ubuntu-24.04',
+            'total_wasted': 0,
+            'total_uploaded': 1048576,
+            'total_uploaded_session': 0,
+            'total_downloaded': 2097152,
+            'total_downloaded_session': 0,
+            'up_limit': -1,
+            'dl_limit': 1024,
+            'time_elapsed': 7200,
+            'seeding_time': 600,
+            'nb_connections': 5,
+            'nb_connections_limit': 100,
+            'share_ratio': 1.5,
+            'addition_date': 1700000000,
+            'completion_date': 1700001000,
+            'created_by': 'qBittorrent v4.6.0',
+            'dl_speed_avg': 1024,
+            'dl_speed': 2048,
+            'eta': 3600,
+            'last_seen': 1700005000,
+            'peers': 5,
+            'peers_total': 10,
+            'pieces_have': 32,
+            'pieces_num': 64,
+            'reannounce': 30,
+            'seeds': 7,
+            'seeds_total': 15,
+            'total_size': 2147483648,
+            'up_speed_avg': 512,
+            'up_speed': 256,
+            'is_private': 1,
+          });
+        final service = _service(adapter);
+
+        final props = await service.getTorrentProperties('abc');
+
+        expect(adapter.requests.last.path, '/api/v2/torrents/properties');
+        expect(adapter.requests.last.queryParameters, {'hash': 'abc'});
+        expect(props.savePath, '/downloads/Ubuntu');
+        expect(props.timeElapsed, 7200);
+        expect(props.seedingTime, 600);
+        expect(props.totalSize, 2147483648);
+        expect(props.shareRatio, 1.5);
+        expect(props.dlLimit, 1024);
+        expect(props.upLimit, -1);
+        expect(props.isPrivate, isTrue);
+      },
+    );
+
+    test('getTorrentProperties propagates transport errors', () async {
+      // The family provider needs AsyncValue.error to fire on /properties
+      // failures (older qB versions return 404, network drops, etc.) so the
+      // UI's _PropRow can render "—" per cell. The service must NOT swallow
+      // the error here.
+      final adapter = _StubAdapter()
+        ..exceptions['/api/v2/torrents/properties'] = Exception('boom');
+      final service = _service(adapter);
+
+      expect(
+        () => service.getTorrentProperties('abc'),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test(
       'addTorrentFiles sends multipart with each file and optional fields',
       () async {
         final adapter = _StubAdapter()..setText('/api/v2/torrents/add', '');

@@ -7,12 +7,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/settings_model.dart';
 
 class _StubAdapter implements HttpClientAdapter {
-  final Map<String, List<dynamic>> responses = {};
+  // Holds JSON responses keyed by request path. The values can be either
+  // a `Map<String, dynamic>` (for object-shaped payloads like /properties)
+  // or a `List<dynamic>` (for list-shaped payloads like /torrents/info),
+  // matching the real qBittorrent API surface.
+  final Map<String, dynamic> responses = {};
+  final Map<String, Exception> exceptions = {};
 
   @override
   void close({bool force = false}) {}
@@ -23,6 +29,9 @@ class _StubAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    if (exceptions.containsKey(options.path)) {
+      throw exceptions[options.path]!;
+    }
     final body = responses[options.path] ?? <dynamic>[];
     return ResponseBody.fromBytes(
       Uint8List.fromList(utf8.encode(jsonEncode(body))),
@@ -61,7 +70,7 @@ Map<String, dynamic> _torrentJson({
 
 ProviderContainer _container({
   SettingsModel? settings,
-  Map<String, List<dynamic>>? responses,
+  Map<String, dynamic>? responses,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -273,6 +282,112 @@ void main() {
       );
       expect(torrents, hasLength(1));
       expect(torrents.first.hash, 'a');
+    });
+  });
+
+  group('torrentPropertiesProvider', () {
+    test('forwards hash and parses the /properties response', () async {
+      final container = _container(
+        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        responses: {
+          '/api/v2/torrents/properties': {
+            'save_path': '/downloads/Ubuntu',
+            'creation_date': 1700000000,
+            'piece_size': 32768,
+            'comment': 'ubuntu-24.04',
+            'total_wasted': 0,
+            'total_uploaded': 1048576,
+            'total_uploaded_session': 0,
+            'total_downloaded': 2097152,
+            'total_downloaded_session': 0,
+            'up_limit': -1,
+            'dl_limit': 1024,
+            'time_elapsed': 7200,
+            'seeding_time': 600,
+            'nb_connections': 5,
+            'nb_connections_limit': 100,
+            'share_ratio': 1.5,
+            'addition_date': 1700000000,
+            'completion_date': 1700001000,
+            'created_by': 'qBittorrent v4.6.0',
+            'dl_speed_avg': 1024,
+            'dl_speed': 2048,
+            'eta': 3600,
+            'last_seen': 1700005000,
+            'peers': 5,
+            'peers_total': 10,
+            'pieces_have': 32,
+            'pieces_num': 64,
+            'reannounce': 30,
+            'seeds': 7,
+            'seeds_total': 15,
+            'total_size': 2147483648,
+            'up_speed_avg': 512,
+            'up_speed': 256,
+            'is_private': 0,
+          },
+        },
+      );
+
+      final props = await container.read(
+        torrentPropertiesProvider('abc').future,
+      );
+      expect(props, isA<TorrentProperties>());
+      expect(props.savePath, '/downloads/Ubuntu');
+      expect(props.timeElapsed, 7200);
+      expect(props.seedingTime, 600);
+      expect(props.totalSize, 2147483648);
+      expect(props.shareRatio, 1.5);
+      expect(props.dlLimit, 1024);
+      expect(props.upLimit, -1);
+      expect(props.isPrivate, isFalse);
+    });
+
+    test('surfaces service errors as AsyncValue.error', () async {
+      // The provider must NOT swallow errors — the UI's _PropRow renders
+      // "—" per cell when the family is in `error` state, so we need that
+      // state to actually fire (older qB versions return 404 on /properties,
+      // network drops, etc.). Trigger the error by serving a non-object
+      // payload for /properties: the service's
+      // `response.data as Map<String, dynamic>` cast will throw.
+      final container2 = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => const SettingsModel(qbittorrentUrl: 'http://localhost'),
+          ),
+          qbittorrentServiceProvider.overrideWith((ref) {
+            final s = ref.watch(currentSettingsProvider);
+            final dio = Dio(BaseOptions(baseUrl: s.qbittorrentUrl));
+            final adapter = _StubAdapter()
+              ..responses['/api/v2/torrents/properties'] = <String>[];
+            dio.httpClientAdapter = adapter;
+            final client = QbittorrentClient(
+              url: s.qbittorrentUrl,
+              username: s.qbittorrentUsername.isEmpty
+                  ? null
+                  : s.qbittorrentUsername,
+              password: s.qbittorrentPassword.isEmpty
+                  ? null
+                  : s.qbittorrentPassword,
+              dio: dio,
+            );
+            return QbittorrentService(client);
+          }),
+        ],
+      );
+      addTearDown(container2.dispose);
+
+      // The provider's family `.future` rethrows the service's error so the
+      // family is left in `AsyncError` — that's the state `_PropRow` keys on
+      // to render "—" per cell. Use a plain try/catch to avoid `expectLater`
+      // + `throwsA` hangs on Riverpod minor-version behavior changes.
+      Object? caught;
+      try {
+        await container2.read(torrentPropertiesProvider('abc').future);
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught, isA<TypeError>());
     });
   });
 }
