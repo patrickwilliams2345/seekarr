@@ -197,12 +197,10 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
         loading: _loading,
         onChanged: _lookup,
         onSelected: (match) async {
-          if (service == ServiceKey.radarr) {
-            setState(() => _match = match);
-            await _apply();
-            return;
-          }
           setState(() => _match = match);
+          if (service == ServiceKey.radarr) {
+            await _apply();
+          }
         },
       );
     }

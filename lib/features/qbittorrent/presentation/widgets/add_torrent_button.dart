@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/sheet_utils.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
 class AddTorrentButton extends ConsumerWidget {
@@ -233,15 +234,15 @@ class AddTorrentButton extends ConsumerWidget {
                         ref.invalidate(torrentsProvider);
                         Navigator.of(ctx2).pop();
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Torrent added successfully'),
-                            ),
+                          SnackBarHelper.success(
+                            context,
+                            'Torrent added successfully',
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(ctx2).showSnackBar(
-                          SnackBar(content: Text('Failed to add torrent: $e')),
+                        SnackBarHelper.error(
+                          ctx2,
+                          'Failed to add torrent: $e',
                         );
                       }
                     },

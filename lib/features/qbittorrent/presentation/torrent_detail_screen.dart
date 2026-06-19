@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import 'package:seekarr/core/app_spacing.dart';
 import 'package:seekarr/core/theme.dart';
 import 'package:seekarr/core/utils/route_utils.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/core/widgets/async_value_widget.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:seekarr/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_edit_dialogs.dart';
@@ -272,23 +274,14 @@ class _InfoTab extends ConsumerWidget {
     if (result == null) return;
     if (result == torrent.category) return;
     if (!context.mounted) return;
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      await service.setCategory([torrent.hash], result);
-      ref.invalidate(torrentsProvider);
-      ref.invalidate(allTorrentsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Category set to "${result.trim()}"')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to set category: $e')));
-      }
-    }
+    await runTorrentAction(
+      context,
+      ref,
+      action: (service) => service.setCategory([torrent.hash], result),
+      successMessage: 'Category set to "${result.trim()}"',
+      failureMessage: 'Failed to set category',
+      invalidate: [torrentsProvider, allTorrentsProvider],
+    );
   }
 
   Future<void> _editTags(
@@ -302,30 +295,21 @@ class _InfoTab extends ConsumerWidget {
     final oldSet = torrent.tags.toSet();
     if (newSet.length == oldSet.length && newSet.containsAll(oldSet)) return;
     if (!context.mounted) return;
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      final toAdd = newSet.difference(oldSet).toList();
-      final toRemove = oldSet.difference(newSet).toList();
-      if (toAdd.isNotEmpty) {
-        await service.addTags([torrent.hash], toAdd);
-      }
-      if (toRemove.isNotEmpty) {
-        await service.removeTags([torrent.hash], toRemove);
-      }
-      ref.invalidate(torrentsProvider);
-      ref.invalidate(allTorrentsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Tags updated')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to update tags: $e')));
-      }
-    }
+    final toAdd = newSet.difference(oldSet).toList();
+    final toRemove = oldSet.difference(newSet).toList();
+    await runTorrentAction(
+      context,
+      ref,
+      action: (service) async {
+        if (toAdd.isNotEmpty) await service.addTags([torrent.hash], toAdd);
+        if (toRemove.isNotEmpty) {
+          await service.removeTags([torrent.hash], toRemove);
+        }
+      },
+      successMessage: 'Tags updated',
+      failureMessage: 'Failed to update tags',
+      invalidate: [torrentsProvider, allTorrentsProvider],
+    );
   }
 }
 
@@ -547,26 +531,15 @@ class _FileRow extends ConsumerWidget {
     if (picked == file.priority) return;
     if (!context.mounted) return;
 
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      await service.filePrio(
-        hash: hash,
-        fileIndexes: [index],
-        priority: picked,
-      );
-      ref.invalidate(torrentFilesProvider(hash));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Priority set to ${_priorityLabels[picked]}')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to set priority: $e')));
-      }
-    }
+    await runTorrentAction(
+      context,
+      ref,
+      action: (service) =>
+          service.filePrio(hash: hash, fileIndexes: [index], priority: picked),
+      successMessage: 'Priority set to ${_priorityLabels[picked]}',
+      failureMessage: 'Failed to set priority',
+      invalidate: [torrentFilesProvider(hash)],
+    );
   }
 }
 
@@ -690,24 +663,14 @@ class _ActionsTab extends ConsumerWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         FilledButton.icon(
-          onPressed: () async {
-            final service = ref.read(qbittorrentServiceProvider);
-            try {
-              await service.resumeTorrents([torrent.hash]);
-              ref.invalidate(torrentsProvider);
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Resumed')));
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Failed to resume: $e')));
-              }
-            }
-          },
+          onPressed: () => runTorrentAction(
+            context,
+            ref,
+            action: (service) => service.resumeTorrents([torrent.hash]),
+            successMessage: 'Resumed',
+            failureMessage: 'Failed to resume',
+            invalidate: [torrentsProvider],
+          ),
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
           label: const Text('Resume'),
         ),
@@ -717,24 +680,14 @@ class _ActionsTab extends ConsumerWidget {
             backgroundColor: AppColors.qbittorrent,
             foregroundColor: Colors.white,
           ),
-          onPressed: () async {
-            final service = ref.read(qbittorrentServiceProvider);
-            try {
-              await service.setForceStart([torrent.hash], true);
-              ref.invalidate(torrentsProvider);
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Force started')));
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-              }
-            }
-          },
+          onPressed: () => runTorrentAction(
+            context,
+            ref,
+            action: (service) => service.setForceStart([torrent.hash], true),
+            successMessage: 'Force started',
+            failureMessage: 'Failed',
+            invalidate: [torrentsProvider],
+          ),
           icon: const Icon(Icons.flash_on_rounded, size: 18),
           label: const Text('Force Resume'),
         ),
@@ -744,24 +697,14 @@ class _ActionsTab extends ConsumerWidget {
             backgroundColor: AppColors.warning,
             foregroundColor: Colors.black,
           ),
-          onPressed: () async {
-            final service = ref.read(qbittorrentServiceProvider);
-            try {
-              await service.pauseTorrents([torrent.hash]);
-              ref.invalidate(torrentsProvider);
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Paused')));
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Failed to pause: $e')));
-              }
-            }
-          },
+          onPressed: () => runTorrentAction(
+            context,
+            ref,
+            action: (service) => service.pauseTorrents([torrent.hash]),
+            successMessage: 'Paused',
+            failureMessage: 'Failed to pause',
+            invalidate: [torrentsProvider],
+          ),
           icon: const Icon(Icons.pause_rounded, size: 18),
           label: const Text('Pause'),
         ),
@@ -778,9 +721,7 @@ class _ActionsTab extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.hash));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Hash copied to clipboard')),
-            );
+            SnackBarHelper.info(context, 'Hash copied to clipboard');
           },
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy hash'),
@@ -789,9 +730,7 @@ class _ActionsTab extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.name));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Name copied to clipboard')),
-            );
+            SnackBarHelper.info(context, 'Name copied to clipboard');
           },
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy name'),
@@ -838,48 +777,28 @@ class _ActionsTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _recheck(
-    BuildContext context,
-    WidgetRef ref,
-    Torrent torrent,
-  ) async {
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      await service.recheck(torrent.hash);
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recheck started')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to recheck: $e')));
-      }
-    }
+  Future<void> _recheck(BuildContext context, WidgetRef ref, Torrent torrent) {
+    return runTorrentAction(
+      context,
+      ref,
+      action: (service) => service.recheck(torrent.hash),
+      successMessage: 'Recheck started',
+      failureMessage: 'Failed to recheck',
+    );
   }
 
   Future<void> _reannounce(
     BuildContext context,
     WidgetRef ref,
     Torrent torrent,
-  ) async {
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      await service.reannounce([torrent.hash]);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reannounced to trackers')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to reannounce: $e')));
-      }
-    }
+  ) {
+    return runTorrentAction(
+      context,
+      ref,
+      action: (service) => service.reannounce([torrent.hash]),
+      successMessage: 'Reannounced to trackers',
+      failureMessage: 'Failed to reannounce',
+    );
   }
 
   Future<void> _setLimit(
@@ -897,55 +816,33 @@ class _ActionsTab extends ConsumerWidget {
     );
     if (result == null) return;
     if (!context.mounted) return;
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      if (isDownload) {
-        await service.setDownloadLimit([torrent.hash], result.bytesPerSecond!);
-      } else {
-        await service.setUploadLimit([torrent.hash], result.bytesPerSecond!);
-      }
-      ref.invalidate(torrentsProvider);
-      if (context.mounted) {
-        final bytes = result.bytesPerSecond!;
-        final label = bytes == 0
-            ? 'cleared'
-            : '${(bytes / 1024).toStringAsFixed(0)} KB/s';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isDownload
-                  ? 'Download limit set to $label'
-                  : 'Upload limit set to $label',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to set limit: $e')));
-      }
-    }
+    final bytes = result.bytesPerSecond!;
+    final label = bytes == 0
+        ? 'cleared'
+        : '${(bytes / 1024).toStringAsFixed(0)} KB/s';
+    await runTorrentAction(
+      context,
+      ref,
+      action: (service) => isDownload
+          ? service.setDownloadLimit([torrent.hash], bytes)
+          : service.setUploadLimit([torrent.hash], bytes),
+      successMessage: isDownload
+          ? 'Download limit set to $label'
+          : 'Upload limit set to $label',
+      failureMessage: 'Failed to set limit',
+      invalidate: [torrentsProvider],
+    );
   }
 
-  Future<void> _toggleAltSpeed(BuildContext context, WidgetRef ref) async {
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      await service.toggleAlternativeSpeedLimits();
-      ref.invalidate(transferInfoProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Alternative speed limits toggled')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to toggle: $e')));
-      }
-    }
+  Future<void> _toggleAltSpeed(BuildContext context, WidgetRef ref) {
+    return runTorrentAction(
+      context,
+      ref,
+      action: (service) => service.toggleAlternativeSpeedLimits(),
+      successMessage: 'Alternative speed limits toggled',
+      failureMessage: 'Failed to toggle',
+      invalidate: [transferInfoProvider],
+    );
   }
 
   void _confirmDeleteSingle(
@@ -960,31 +857,18 @@ class _ActionsTab extends ConsumerWidget {
     ).then((result) async {
       if (!result.confirmed) return;
       if (!context.mounted) return;
-      final service = ref.read(qbittorrentServiceProvider);
-      try {
-        await service.deleteTorrents([
-          torrent.hash,
-        ], deleteFiles: result.deleteFiles);
-        ref.invalidate(torrentsProvider);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result.deleteFiles
-                    ? 'Deleted torrent and files'
-                    : 'Deleted torrent',
-              ),
-            ),
-          );
-          context.pop();
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
-        }
-      }
+      final ok = await runTorrentAction(
+        context,
+        ref,
+        action: (service) =>
+            service.deleteTorrents([torrent.hash], deleteFiles: result.deleteFiles),
+        successMessage: result.deleteFiles
+            ? 'Deleted torrent and files'
+            : 'Deleted torrent',
+        failureMessage: 'Failed to delete',
+        invalidate: [torrentsProvider],
+      );
+      if (ok && context.mounted) context.pop();
     });
   }
 }

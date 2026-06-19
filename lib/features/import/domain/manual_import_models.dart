@@ -428,8 +428,7 @@ class ManualImportItem {
   String get languageLabel {
     if (languages.isEmpty) return 'Original';
     return languages
-        .map((item) => mapOrNull(item)?['name'] ?? item)
-        .map((item) => item.toString())
+        .map((item) => (mapOrNull(item)?['name'] ?? item).toString())
         .where((item) => item.trim().isNotEmpty)
         .join(', ');
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
 
@@ -39,25 +40,15 @@ class TorrentSelectionBar extends ConsumerWidget {
               ),
               const Spacer(),
               TextButton.icon(
-                onPressed: () async {
-                  final hashes = selectedHashes.toList();
-                  final service = ref.read(qbittorrentServiceProvider);
-                  try {
-                    await service.resumeTorrents(hashes);
-                    ref.invalidate(torrentsProvider);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('Resumed')));
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to resume: $e')),
-                      );
-                    }
-                  }
-                },
+                onPressed: () => runTorrentAction(
+                  context,
+                  ref,
+                  action: (service) =>
+                      service.resumeTorrents(selectedHashes.toList()),
+                  successMessage: 'Resumed',
+                  failureMessage: 'Failed to resume',
+                  invalidate: [torrentsProvider],
+                ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: const Text('Resume'),
               ),
@@ -67,43 +58,27 @@ class TorrentSelectionBar extends ConsumerWidget {
                   color: AppColors.qbittorrent,
                 ),
                 tooltip: 'Force Resume',
-                onPressed: () async {
-                  final hashes = selectedHashes.toList();
-                  final service = ref.read(qbittorrentServiceProvider);
-                  try {
-                    await service.setForceStart(hashes, true);
-                    ref.invalidate(torrentsProvider);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Force started')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                    }
-                  }
-                },
+                onPressed: () => runTorrentAction(
+                  context,
+                  ref,
+                  action: (service) =>
+                      service.setForceStart(selectedHashes.toList(), true),
+                  successMessage: 'Force started',
+                  failureMessage: 'Failed',
+                  invalidate: [torrentsProvider],
+                ),
               ),
               IconButton(
                 icon: Icon(Icons.pause_rounded, color: AppColors.warning),
                 tooltip: 'Pause',
-                onPressed: () async {
-                  final hashes = selectedHashes.toList();
-                  final service = ref.read(qbittorrentServiceProvider);
-                  try {
-                    await service.pauseTorrents(hashes);
-                    ref.invalidate(torrentsProvider);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to pause: $e')),
-                      );
-                    }
-                  }
-                },
+                onPressed: () => runTorrentAction(
+                  context,
+                  ref,
+                  action: (service) =>
+                      service.pauseTorrents(selectedHashes.toList()),
+                  failureMessage: 'Failed to pause',
+                  invalidate: [torrentsProvider],
+                ),
               ),
               IconButton(
                 icon: Icon(
@@ -137,32 +112,20 @@ Future<bool> confirmDeleteTorrents(
   if (!result.confirmed) return false;
   if (!context.mounted) return false;
 
-  final service = ref.read(qbittorrentServiceProvider);
-  try {
-    await service.deleteTorrents(
-      hashes.toList(),
-      deleteFiles: result.deleteFiles,
-    );
-    ref.invalidate(torrentsProvider);
+  final plural = count > 1 ? 's' : '';
+  final ok = await runTorrentAction(
+    context,
+    ref,
+    action: (service) =>
+        service.deleteTorrents(hashes.toList(), deleteFiles: result.deleteFiles),
+    successMessage: result.deleteFiles
+        ? 'Deleted $count torrent$plural and files'
+        : 'Deleted $count torrent$plural',
+    failureMessage: 'Failed to delete',
+    invalidate: [torrentsProvider],
+  );
+  if (ok) {
     ref.read(selectedTorrentHashesProvider.notifier).state = {};
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.deleteFiles
-                ? 'Deleted $count torrent${count > 1 ? 's' : ''} and files'
-                : 'Deleted $count torrent${count > 1 ? 's' : ''}',
-          ),
-        ),
-      );
-    }
-    return true;
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
-    }
-    return false;
   }
+  return ok;
 }

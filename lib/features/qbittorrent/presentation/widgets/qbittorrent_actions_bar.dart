@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/theme.dart';
+import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:seekarr/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:seekarr/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 
@@ -60,42 +61,36 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     _QbOverflowAction action,
-  ) async {
-    final service = ref.read(qbittorrentServiceProvider);
-    try {
-      switch (action) {
-        case _QbOverflowAction.pauseAll:
-          await service.pauseTorrents(const ['all']);
-          ref.invalidate(torrentsProvider);
-          ref.invalidate(allTorrentsProvider);
-          _showSnack(context, 'All torrents paused');
-          break;
-        case _QbOverflowAction.resumeAll:
-          await service.resumeTorrents(const ['all']);
-          ref.invalidate(torrentsProvider);
-          ref.invalidate(allTorrentsProvider);
-          _showSnack(context, 'All torrents resumed');
-          break;
-        case _QbOverflowAction.toggleAltSpeed:
-          await service.toggleAlternativeSpeedLimits();
-          ref.invalidate(transferInfoProvider);
-          _showSnack(context, 'Alternative speed limits toggled');
-          break;
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
+  ) {
+    switch (action) {
+      case _QbOverflowAction.pauseAll:
+        return runTorrentAction(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-      }
+          ref,
+          action: (service) => service.pauseTorrents(const ['all']),
+          successMessage: 'All torrents paused',
+          failureMessage: 'Failed',
+          invalidate: [torrentsProvider, allTorrentsProvider],
+        );
+      case _QbOverflowAction.resumeAll:
+        return runTorrentAction(
+          context,
+          ref,
+          action: (service) => service.resumeTorrents(const ['all']),
+          successMessage: 'All torrents resumed',
+          failureMessage: 'Failed',
+          invalidate: [torrentsProvider, allTorrentsProvider],
+        );
+      case _QbOverflowAction.toggleAltSpeed:
+        return runTorrentAction(
+          context,
+          ref,
+          action: (service) => service.toggleAlternativeSpeedLimits(),
+          successMessage: 'Alternative speed limits toggled',
+          failureMessage: 'Failed',
+          invalidate: [transferInfoProvider],
+        );
     }
-  }
-
-  void _showSnack(BuildContext context, String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
