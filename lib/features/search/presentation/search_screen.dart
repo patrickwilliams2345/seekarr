@@ -113,7 +113,7 @@ class _ServiceFilterChips extends StatelessWidget {
             selected: selectedService == null,
             onTap: () => onSelected(null),
           ),
-          for (final service in ServiceKey.values)
+          for (final service in ServiceKey.values.where((s) => s.isSearchable))
             _FilterChip(
               label: service.title,
               color: service.accent,
@@ -298,7 +298,7 @@ class _SearchResultCard extends StatelessWidget {
     final service = result.service;
 
     return AppCard.outlined(
-      onTap: () => context.push(result.route),
+      onTap: () => context.push(result.route, extra: result.routeExtra),
       backgroundColor: colorScheme.surfaceContainer,
       borderColor: colorScheme.outlineVariant,
       borderRadius: AppRadius.borderRadiusMd,

@@ -9,6 +9,7 @@ class GlobalSearchResult {
   final Map<String, String>? imageHeaders;
   final List<String> tags;
   final String route;
+  final Object? routeExtra;
 
   const GlobalSearchResult({
     required this.service,
@@ -19,6 +20,7 @@ class GlobalSearchResult {
     required this.imageHeaders,
     required this.tags,
     required this.route,
+    this.routeExtra,
   });
 }
 

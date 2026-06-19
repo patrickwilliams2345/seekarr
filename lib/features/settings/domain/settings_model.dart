@@ -36,6 +36,9 @@ class SettingsModel {
   final String sonarrApiKey;
   final String lidarrUrl;
   final String lidarrApiKey;
+  final String qbittorrentUrl;
+  final String qbittorrentUsername;
+  final String qbittorrentPassword;
   final String region;
   final AppThemeMode themeMode;
 
@@ -65,6 +68,14 @@ class SettingsModel {
           update: (settings, {url, apiKey}) =>
               settings.copyWith(lidarrUrl: url, lidarrApiKey: apiKey),
         ),
+        ServiceKey.qbittorrent: _ServiceSettingsAccess(
+          url: (settings) => settings.qbittorrentUrl,
+          apiKey: (settings) => settings.qbittorrentPassword,
+          update: (settings, {url, apiKey}) => settings.copyWith(
+            qbittorrentUrl: url,
+            qbittorrentPassword: apiKey,
+          ),
+        ),
       };
 
   static String normalizeRegion(String? region) {
@@ -81,6 +92,9 @@ class SettingsModel {
     this.sonarrApiKey = '',
     this.lidarrUrl = '',
     this.lidarrApiKey = '',
+    this.qbittorrentUrl = '',
+    this.qbittorrentUsername = '',
+    this.qbittorrentPassword = '',
     this.region = 'US',
     this.themeMode = AppThemeMode.system,
   });
@@ -94,6 +108,9 @@ class SettingsModel {
     String? sonarrApiKey,
     String? lidarrUrl,
     String? lidarrApiKey,
+    String? qbittorrentUrl,
+    String? qbittorrentUsername,
+    String? qbittorrentPassword,
     String? region,
     AppThemeMode? themeMode,
   }) {
@@ -106,6 +123,9 @@ class SettingsModel {
       sonarrApiKey: sonarrApiKey ?? this.sonarrApiKey,
       lidarrUrl: lidarrUrl ?? this.lidarrUrl,
       lidarrApiKey: lidarrApiKey ?? this.lidarrApiKey,
+      qbittorrentUrl: qbittorrentUrl ?? this.qbittorrentUrl,
+      qbittorrentUsername: qbittorrentUsername ?? this.qbittorrentUsername,
+      qbittorrentPassword: qbittorrentPassword ?? this.qbittorrentPassword,
       region: region ?? this.region,
       themeMode: themeMode ?? this.themeMode,
     );
@@ -134,6 +154,35 @@ class SettingsModel {
     String? apiKey,
   }) {
     return _serviceAccessFor(service).update(this, url: url, apiKey: apiKey);
+  }
+
+  SettingsModel copyWithQbittorrent({
+    String? url,
+    String? username,
+    String? password,
+  }) {
+    return copyWith(
+      qbittorrentUrl: url,
+      qbittorrentUsername: username,
+      qbittorrentPassword: password,
+    );
+  }
+
+  String usernameFor(ServiceKey service) {
+    if (service == ServiceKey.qbittorrent) return qbittorrentUsername;
+    return '';
+  }
+
+  String passwordFor(ServiceKey service) {
+    if (service == ServiceKey.qbittorrent) return qbittorrentPassword;
+    return '';
+  }
+
+  bool isServiceConfigured(ServiceKey service) {
+    if (service == ServiceKey.qbittorrent) {
+      return qbittorrentUrl.isNotEmpty;
+    }
+    return urlFor(service).isNotEmpty && apiKeyFor(service).isNotEmpty;
   }
 }
 

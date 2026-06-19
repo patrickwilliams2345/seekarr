@@ -44,7 +44,9 @@ void main() {
     expect(find.text('No Seerr results'), findsNothing);
   });
 
-  testWidgets('tapping a result navigates to its detail route', (tester) async {
+  testWidgets('tapping a result navigates with the result as route extra', (
+    tester,
+  ) async {
     final router = GoRouter(
       initialLocation: '/search',
       routes: [
@@ -54,9 +56,14 @@ void main() {
         ),
         GoRoute(
           path: '/services/radarr/movie/:id',
-          builder: (context, state) => Scaffold(
-            body: Text('Movie detail ${state.pathParameters['id']}'),
-          ),
+          builder: (context, state) {
+            final movie = state.extra as RadarrMovie?;
+            return Scaffold(
+              body: Text(
+                'Movie detail ${state.pathParameters['id']} ${movie?.title}',
+              ),
+            );
+          },
         ),
       ],
     );
@@ -74,7 +81,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.state.uri.toString(), '/services/radarr/movie/10');
-    expect(find.text('Movie detail 10'), findsOneWidget);
+    expect(find.text('Movie detail 10 Dune'), findsOneWidget);
   });
 }
 

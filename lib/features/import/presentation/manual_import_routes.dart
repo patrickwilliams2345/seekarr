@@ -12,7 +12,7 @@ const manualImportProgressPath = '$manualImportPathPrefix/progress';
 ServiceKey? manualImportServiceFromRoute(String? value) {
   final normalized = value?.trim().toLowerCase();
   for (final service in ServiceKey.values) {
-    if (service != ServiceKey.seerr && service.routeParam == normalized) {
+    if (service.supportsManualImport && service.routeParam == normalized) {
       return service;
     }
   }

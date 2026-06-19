@@ -9,11 +9,13 @@ import 'package:seekarr/features/settings/domain/service_key.dart';
 class ServiceDashboardScreen extends StatefulWidget {
   final ServiceKey service;
   final Widget child;
+  final Widget? trailingAction;
 
   const ServiceDashboardScreen({
     super.key,
     required this.service,
     required this.child,
+    this.trailingAction,
   });
 
   @override
@@ -49,6 +51,7 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
               child: _ServiceDashboardAppBar(
                 service: widget.service,
                 isPickerOpen: _isPickerOpen,
+                trailingAction: widget.trailingAction,
                 onTogglePicker: () {
                   setState(() => _isPickerOpen = !_isPickerOpen);
                 },
@@ -80,11 +83,13 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
 class _ServiceDashboardAppBar extends StatelessWidget {
   final ServiceKey service;
   final bool isPickerOpen;
+  final Widget? trailingAction;
   final VoidCallback onTogglePicker;
 
   const _ServiceDashboardAppBar({
     required this.service,
     required this.isPickerOpen,
+    this.trailingAction,
     required this.onTogglePicker,
   });
 
@@ -151,11 +156,14 @@ class _ServiceDashboardAppBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            IconButton(
-              icon: Icon(Icons.monitor_heart_outlined, color: service.accent),
-              onPressed: () => context.go('/activity'),
-              tooltip: 'Activity',
-            ),
+            if (trailingAction != null)
+              trailingAction!
+            else
+              IconButton(
+                icon: Icon(Icons.monitor_heart_outlined, color: service.accent),
+                onPressed: () => context.go('/activity'),
+                tooltip: 'Activity',
+              ),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/features/import/data/manual_import_service.dart';
@@ -5,6 +6,90 @@ import 'package:seekarr/features/import/domain/manual_import_models.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
 
 const Object _noValue = Object();
+
+String mapImportError(Object error, ServiceKey service) {
+  if (error is DioException) {
+    final title = service.title;
+    final status = error.response?.statusCode;
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return "Couldn't reach $title. Check the URL and that the service is running.";
+    }
+    if (status == 500) {
+      final hint = switch (service) {
+        ServiceKey.radarr =>
+          "the file's name isn't parseable by $title "
+              '(missing year, ambiguous title) or the folder name gives no hint. '
+              'Try moving the file into a folder named after the movie and '
+              'including the year, e.g. `Title (YEAR)/Title (YEAR).ext`, '
+              'then rescan.',
+        ServiceKey.sonarr =>
+          "the file's name doesn't match a known series/episode pattern, "
+              'or the folder name gives no hint. '
+              'Try naming the folder after the series, e.g. '
+              '`Series Title/S01E01.ext`, then rescan.',
+        ServiceKey.lidarr =>
+          "the file's name doesn't match a known artist/album/track pattern, "
+              'or the folder name gives no hint. '
+              'Try organising into `Artist/Album/Track.ext`, then rescan.',
+        _ => 'check the service logs for the full error.',
+      };
+      return '$title returned 500 while processing the manual import. '
+          'Check $title → System → Logs for the full error. '
+          'Common cause: $hint';
+    }
+    if (status != null) {
+      final data = error.response?.data;
+      final message = data is Map ? data['message'] : null;
+      final messageStr = message is String && message.isNotEmpty ? message : '';
+      return messageStr.isEmpty
+          ? '$title returned $status.'
+          : '$title returned $status: $messageStr';
+    }
+    return '$title request failed. Check the URL and that the service is running.';
+  }
+  if (error is Exception) {
+    final s = error.toString();
+    // Strip the "Exception: " prefix for a cleaner user-facing message.
+    if (s.startsWith('Exception: ')) return s.substring('Exception: '.length);
+    return s;
+  }
+  return error.toString();
+}
+
+String? libraryGuardError(ServiceKey service, ManualImportFixAssignment a) {
+  if (a.match.id <= 0) {
+    return 'This title isn\'t in your ${service.title} library — add it '
+        'from the ${_libraryTabLabel(service)} tab first.';
+  }
+  switch (service) {
+    case ServiceKey.sonarr:
+      if (a.episodes.isEmpty) {
+        return 'Pick at least one episode from your ${service.title} library '
+            'before importing.';
+      }
+    case ServiceKey.lidarr:
+      if (a.tracks.isEmpty || a.album == null) {
+        return 'Pick an album and at least one track from your ${service.title} '
+            'library before importing.';
+      }
+    case ServiceKey.radarr:
+      // Radarr only needs a movieId; match.id > 0 is sufficient.
+      break;
+    case _:
+      return 'This service does not support manual import.';
+  }
+  return null;
+}
+
+String _libraryTabLabel(ServiceKey service) => switch (service) {
+  ServiceKey.radarr => 'Movies',
+  ServiceKey.sonarr => 'Series',
+  ServiceKey.lidarr => 'Music',
+  _ => 'Library',
+};
 
 final manualImportFlowProvider =
     NotifierProvider<ManualImportFlowNotifier, ManualImportFlowState>(
@@ -27,7 +112,6 @@ class ManualImportFlowState {
   final ManualImportCommandStatus? command;
   final bool isLoadingBrowse;
   final bool isLoadingItems;
-  final bool isReprocessing;
   final bool isSubmitting;
   final ManualImportMode importMode;
   final String? error;
@@ -48,7 +132,6 @@ class ManualImportFlowState {
     this.command,
     this.isLoadingBrowse = false,
     this.isLoadingItems = false,
-    this.isReprocessing = false,
     this.isSubmitting = false,
     this.importMode = ManualImportMode.auto,
     this.error,
@@ -93,7 +176,6 @@ class ManualImportFlowState {
     Object? command = _noValue,
     bool? isLoadingBrowse,
     bool? isLoadingItems,
-    bool? isReprocessing,
     bool? isSubmitting,
     ManualImportMode? importMode,
     Object? error = _noValue,
@@ -126,7 +208,6 @@ class ManualImportFlowState {
           : command as ManualImportCommandStatus?,
       isLoadingBrowse: isLoadingBrowse ?? this.isLoadingBrowse,
       isLoadingItems: isLoadingItems ?? this.isLoadingItems,
-      isReprocessing: isReprocessing ?? this.isReprocessing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       importMode: importMode ?? this.importMode,
       error: identical(error, _noValue) ? this.error : error as String?,
@@ -169,7 +250,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       await selectFolder(defaultPath);
     } catch (error) {
-      state = state.copyWith(isLoadingBrowse: false, error: error.toString());
+      state = state.copyWith(
+        isLoadingBrowse: false,
+        error: mapImportError(error, service),
+      );
     }
   }
 
@@ -190,7 +274,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       final fileSystem = await api.getFileSystem(path);
       state = state.copyWith(fileSystem: fileSystem, isLoadingBrowse: false);
     } catch (error) {
-      state = state.copyWith(isLoadingBrowse: false, error: error.toString());
+      state = state.copyWith(
+        isLoadingBrowse: false,
+        error: mapImportError(error, service),
+      );
     }
   }
 
@@ -239,7 +326,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       return items;
     } catch (error) {
-      state = state.copyWith(isLoadingItems: false, error: error.toString());
+      state = state.copyWith(
+        isLoadingItems: false,
+        error: mapImportError(error, service),
+      );
       return const [];
     }
   }
@@ -307,7 +397,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       state = state.copyWith(qualityOptions: options);
       return options;
     } catch (error) {
-      state = state.copyWith(error: error.toString());
+      state = state.copyWith(error: mapImportError(error, service));
       return const [];
     }
   }
@@ -324,7 +414,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       state = state.copyWith(languageOptions: options);
       return options;
     } catch (error) {
-      state = state.copyWith(error: error.toString());
+      state = state.copyWith(error: mapImportError(error, service));
       return const [];
     }
   }
@@ -333,37 +423,40 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     state = state.copyWith(importMode: importMode);
   }
 
-  Future<ManualImportItem?> reprocessItem(
+  /// Applies a fix assignment to a single item locally — no API call.
+  ///
+  /// The actual import is triggered separately via [confirmImport], which
+  /// POSTs the `ManualImport` command for all currently selected items.
+  /// This method only updates the in-memory item so that
+  /// `isReadyForImportFor(service)` returns true and the item can be added
+  /// to the selection.
+  Future<ManualImportItem?> applyFixAssignment(
     ManualImportItem item,
     ManualImportFixAssignment assignment,
   ) async {
     final service = state.service;
     if (service == null) return null;
 
-    state = state.copyWith(isReprocessing: true, error: null);
-    try {
-      final api = ref.read(manualImportServiceProvider(service));
-      final reprocessed = await api.reprocessItem(
-        item: item,
-        assignment: assignment,
-      );
-      final merged = item.mergedWithReprocessed(reprocessed);
-      final updated = merged.resolvedWithAssignment(service, assignment);
-      state = state.copyWith(
-        items: [
-          for (final existing in state.items)
-            if (existing.path == item.path || existing.id == item.id)
-              updated
-            else
-              existing,
-        ],
-        isReprocessing: false,
-      );
-      return updated;
-    } catch (error) {
-      state = state.copyWith(isReprocessing: false, error: error.toString());
+    final guardError = libraryGuardError(service, assignment);
+    if (guardError != null) {
+      state = state.copyWith(error: guardError);
       return null;
     }
+
+    final resolved = item.resolvedWithAssignment(service, assignment);
+    state = state.copyWith(
+      items: [
+        for (final existing in state.items)
+          if (existing.path == item.path || existing.id == item.id)
+            resolved
+          else
+            existing,
+      ],
+      // Auto-select the now-ready item so "Confirm import" picks it up.
+      selectedPaths: {...state.selectedPaths, resolved.path},
+      error: null,
+    );
+    return resolved;
   }
 
   Future<ManualImportItem?> updateItemMetadata(
@@ -388,44 +481,47 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
     final assignment = _assignmentForItem(service, draft);
 
-    return reprocessItem(draft, assignment);
+    return applyFixAssignment(draft, assignment);
   }
 
-  Future<List<ManualImportItem>> reprocessItems(
+  /// Applies fix assignments to a batch of items locally — no API call.
+  ///
+  /// Mirrors [applyFixAssignment] for the bulk fix flow. The actual import
+  /// is triggered separately via [confirmImport].
+  Future<List<ManualImportItem>> applyBulkFixAssignments(
     Map<ManualImportItem, ManualImportFixAssignment> assignments,
   ) async {
     final service = state.service;
     if (service == null || assignments.isEmpty) return const [];
 
-    state = state.copyWith(isReprocessing: true, error: null);
-    try {
-      final api = ref.read(manualImportServiceProvider(service));
-      final updatedByPath = <String, ManualImportItem>{};
-      for (final entry in assignments.entries) {
-        final reprocessed = await api.reprocessItem(
-          item: entry.key,
-          assignment: entry.value,
-        );
-        updatedByPath[entry.key.path] = entry.key
-            .mergedWithReprocessed(reprocessed)
-            .resolvedWithAssignment(service, entry.value);
+    // Library guard — fail fast, don't update state for invalid assignments.
+    for (final entry in assignments.entries) {
+      final guardError = libraryGuardError(service, entry.value);
+      if (guardError != null) {
+        state = state.copyWith(error: guardError);
+        return const [];
       }
-      state = state.copyWith(
-        items: [
-          for (final existing in state.items)
-            updatedByPath[existing.path] ?? existing,
-        ],
-        bulkFixPaths: const {},
-        isReprocessing: false,
-      );
-      final refreshed = state.items
-          .where((item) => updatedByPath.containsKey(item.path))
-          .toList(growable: false);
-      return refreshed;
-    } catch (error) {
-      state = state.copyWith(isReprocessing: false, error: error.toString());
-      return const [];
     }
+
+    final updatedByPath = <String, ManualImportItem>{};
+    for (final entry in assignments.entries) {
+      final resolved = entry.key.resolvedWithAssignment(service, entry.value);
+      updatedByPath[entry.key.path] = resolved;
+    }
+    state = state.copyWith(
+      items: [
+        for (final existing in state.items)
+          updatedByPath[existing.path] ?? existing,
+      ],
+      // Auto-select the now-ready items so "Confirm import" picks them up.
+      selectedPaths: {...state.selectedPaths, ...updatedByPath.keys},
+      bulkFixPaths: const {},
+      error: null,
+    );
+    final refreshed = state.items
+        .where((item) => updatedByPath.containsKey(item.path))
+        .toList(growable: false);
+    return refreshed;
   }
 
   Future<List<ManualImportEpisode>> getEpisodes({
@@ -472,7 +568,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       return command;
     } catch (error) {
-      state = state.copyWith(isSubmitting: false, error: error.toString());
+      state = state.copyWith(
+        isSubmitting: false,
+        error: mapImportError(error, service),
+      );
       return null;
     }
   }
@@ -487,7 +586,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       final next = await api.getCommand(command.id);
       state = state.copyWith(command: next);
     } catch (error) {
-      state = state.copyWith(error: error.toString());
+      state = state.copyWith(error: mapImportError(error, service));
     }
   }
 }
@@ -500,7 +599,7 @@ ManualImportFixAssignment _assignmentForItem(
     ServiceKey.radarr => item.movie ?? const <String, dynamic>{},
     ServiceKey.sonarr => item.series ?? const <String, dynamic>{},
     ServiceKey.lidarr => item.artist ?? const <String, dynamic>{},
-    ServiceKey.seerr => const <String, dynamic>{},
+    _ => const <String, dynamic>{},
   };
   final episodes = service == ServiceKey.sonarr
       ? item.episodes

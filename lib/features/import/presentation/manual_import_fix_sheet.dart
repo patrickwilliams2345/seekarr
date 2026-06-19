@@ -148,7 +148,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       ServiceKey.radarr => 'Assign movie identity',
       ServiceKey.sonarr => 'Assign episode identity',
       ServiceKey.lidarr => 'Assign music identity',
-      ServiceKey.seerr => 'Assign identity',
+      _ => 'Assign identity',
     };
     final subtitle = widget.isBulk
         ? '$bulkCount unmatched files'
@@ -197,12 +197,10 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
         loading: _loading,
         onChanged: _lookup,
         onSelected: (match) async {
-          if (service == ServiceKey.radarr) {
-            setState(() => _match = match);
-            await _apply();
-            return;
-          }
           setState(() => _match = match);
+          if (service == ServiceKey.radarr) {
+            await _apply();
+          }
         },
       );
     }
@@ -319,7 +317,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       ServiceKey.sonarr => const ['Series', 'Season', 'Episode'],
       ServiceKey.lidarr => const ['Artist', 'Album', 'Track'],
       ServiceKey.radarr => const ['Movie'],
-      ServiceKey.seerr => const ['Match'],
+      _ => const ['Match'],
     };
   }
 
@@ -327,7 +325,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
     return switch (widget.service) {
       ServiceKey.radarr => true,
       ServiceKey.sonarr || ServiceKey.lidarr => _step == 2,
-      ServiceKey.seerr => true,
+      _ => true,
     };
   }
 
@@ -337,7 +335,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
         (_step == 0 && _match != null) || (_step == 1 && _seasonNumber != null),
       ServiceKey.lidarr =>
         (_step == 0 && _match != null) || (_step == 1 && _album != null),
-      ServiceKey.radarr || ServiceKey.seerr => false,
+      _ => false,
     };
   }
 
@@ -358,7 +356,7 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
                     (item) => _trackAssignments.containsKey(item.path),
                   )
                 : _trackAssignments.containsKey(widget.item?.path)),
-      ServiceKey.seerr => false,
+      _ => false,
     };
   }
 
@@ -527,13 +525,13 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
     final notifier = ref.read(manualImportFlowProvider.notifier);
     final beforeError = ref.read(manualImportFlowProvider).error;
     if (widget.isBulk) {
-      await notifier.reprocessItems({
+      await notifier.applyBulkFixAssignments({
         for (final item in widget.bulkItems) item: _assignmentFor(item, match),
       });
     } else {
       final item = widget.item;
       if (item != null) {
-        await notifier.reprocessItem(item, _assignmentFor(item, match));
+        await notifier.applyFixAssignment(item, _assignmentFor(item, match));
       }
     }
 
