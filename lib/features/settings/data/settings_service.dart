@@ -23,6 +23,8 @@ abstract interface class SecureSettingsStore {
   Future<void> write({required String key, required String value});
 
   Future<void> delete({required String key});
+
+  Future<void> deleteAll();
 }
 
 class FlutterSecureSettingsStore implements SecureSettingsStore {
@@ -43,6 +45,11 @@ class FlutterSecureSettingsStore implements SecureSettingsStore {
   @override
   Future<void> delete({required String key}) {
     return _storage.delete(key: key);
+  }
+
+  @override
+  Future<void> deleteAll() {
+    return _storage.deleteAll();
   }
 }
 
@@ -141,6 +148,33 @@ class SettingsService {
 
   Future<void> saveOnboardingComplete() async {
     await _prefs.setBool(_kOnboardingComplete, true);
+  }
+
+  /// Wipes all Seekarr-persisted data: SharedPreferences keys (service URLs,
+  /// credentials, region, theme, onboarding flag, legacy keys) and every
+  /// secure-storage entry. Clears secure storage first so a Keychain failure
+  /// leaves prefs intact and the caller can surface an error.
+  Future<void> clearAll() async {
+    await _secureStore.deleteAll();
+
+    for (final storageKeys in _serviceStorageKeys.values) {
+      await _prefs.remove(storageKeys.url);
+      await _prefs.remove(storageKeys.legacyApiKey);
+      if (storageKeys.legacyUrl != null) {
+        await _prefs.remove(storageKeys.legacyUrl!);
+      }
+      if (storageKeys.legacyPlaintextApiKey != null) {
+        await _prefs.remove(storageKeys.legacyPlaintextApiKey!);
+      }
+      if (storageKeys.username != null) {
+        await _prefs.remove(storageKeys.username!);
+      }
+    }
+
+    await _prefs.remove(_kRegion);
+    await _prefs.remove(_kThemeMode);
+    await _prefs.remove(_kOnboardingComplete);
+    await _prefs.remove('hidden_tabs');
   }
 
   Future<SettingsModel> loadSettings() async {

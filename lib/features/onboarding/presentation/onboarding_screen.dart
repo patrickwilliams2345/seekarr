@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
 import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
@@ -188,13 +189,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       }
     }
-    await ref.read(settingsProvider.notifier).updateSettings(updated);
+    try {
+      await ref.read(settingsProvider.notifier).updateSettings(updated);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't save your services. Please try again. ($e)",
+      );
+      return;
+    }
     _goToStep(2);
   }
 
   /// Marks onboarding complete — triggers router redirect to /services.
   Future<void> _finish() async {
-    await markOnboardingComplete(ref);
+    try {
+      await markOnboardingComplete(ref);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't finish setup. Please try again. ($e)",
+      );
+    }
   }
 
   void _goToStep(int step) {
@@ -262,7 +280,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _ReadyStep(
                     configuredServices: _configuredServices,
                     verifyStatus: _verifyStatus,
-                    onReviewSettings: _finish,
+                    onReviewSettings: () async => _goToStep(1),
                     onFinish: _finish,
                   ),
                 ],

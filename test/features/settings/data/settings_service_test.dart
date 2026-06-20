@@ -158,5 +158,62 @@ void main() {
 
       expect(await service.loadOnboardingComplete(), isTrue);
     });
+
+    test('clearAll wipes settings, credentials, and onboarding flag', () async {
+      const settings = SettingsModel(
+        seerrUrl: 'https://jelly.example.com',
+        seerrApiKey: 'jelly-key',
+        radarrUrl: 'https://radarr.example.com',
+        radarrApiKey: 'radarr-key',
+        qbittorrentUsername: 'admin',
+        qbittorrentPassword: 'pass',
+        region: 'IT',
+        themeMode: AppThemeMode.dark,
+      );
+      await service.saveSettings(settings);
+      await service.saveOnboardingComplete();
+
+      await service.clearAll();
+
+      final loaded = await service.loadSettings();
+      expect(loaded.seerrUrl, isEmpty);
+      expect(loaded.seerrApiKey, isEmpty);
+      expect(loaded.radarrUrl, isEmpty);
+      expect(loaded.radarrApiKey, isEmpty);
+      expect(loaded.qbittorrentUsername, isEmpty);
+      expect(loaded.qbittorrentPassword, isEmpty);
+      expect(loaded.themeMode, AppThemeMode.system);
+
+      expect(await secureStore.read(key: 'secure_seerr_api_key'), isNull);
+      expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);
+      expect(
+        await secureStore.read(key: 'secure_qbittorrent_password'),
+        isNull,
+      );
+
+      expect(prefs.getString('seerr_url'), isNull);
+      expect(prefs.getString('region'), isNull);
+      expect(prefs.getString('theme_mode'), isNull);
+      expect(prefs.getString('qbittorrent_username'), isNull);
+
+      expect(await service.loadOnboardingComplete(), isFalse);
+    });
+
+    test('clearAll removes legacy keys too', () async {
+      await prefs.setString('jellyseerr_url', 'https://legacy.example.com');
+      await prefs.setString('jellyseerr_api_key', 'legacy-key');
+      await prefs.setString('radarr_api_key', 'plaintext-key');
+      await secureStore.write(
+        key: 'secure_jellyseerr_api_key',
+        value: 'legacy-seerr-key',
+      );
+
+      await service.clearAll();
+
+      expect(prefs.getString('jellyseerr_url'), isNull);
+      expect(prefs.getString('jellyseerr_api_key'), isNull);
+      expect(prefs.getString('radarr_api_key'), isNull);
+      expect(await secureStore.read(key: 'secure_jellyseerr_api_key'), isNull);
+    });
   });
 }

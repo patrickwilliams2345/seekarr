@@ -860,8 +860,9 @@ class _ActionsTab extends ConsumerWidget {
       final ok = await runTorrentAction(
         context,
         ref,
-        action: (service) =>
-            service.deleteTorrents([torrent.hash], deleteFiles: result.deleteFiles),
+        action: (service) => service.deleteTorrents([
+          torrent.hash,
+        ], deleteFiles: result.deleteFiles),
         successMessage: result.deleteFiles
             ? 'Deleted torrent and files'
             : 'Deleted torrent',
