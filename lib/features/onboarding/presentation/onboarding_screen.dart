@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:seekarr/core/api/api_client.dart';
+import 'package:seekarr/core/utils/snack_bar_helper.dart';
 import 'package:seekarr/features/onboarding/data/onboarding_provider.dart';
+import 'package:seekarr/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:seekarr/features/settings/data/service_connection_provider.dart';
 import 'package:seekarr/features/settings/data/settings_provider.dart';
 import 'package:seekarr/features/settings/domain/service_key.dart';
@@ -24,6 +26,7 @@ const _serviceColors = {
   ServiceKey.radarr: Color(0xFFF59E0B), // amber
   ServiceKey.sonarr: Color(0xFF8B5CF6), // purple
   ServiceKey.lidarr: Color(0xFFEC4899), // pink
+  ServiceKey.qbittorrent: Color(0xFF2F67BA), // blue
 };
 
 // ─── Health-check helper (mirrors serviceConnectionProvider logic) ──────────
@@ -36,14 +39,35 @@ String _healthEndpoint(ServiceKey service) {
       return '/api/v3/system/status';
     case ServiceKey.lidarr:
       return '/api/v1/system/status';
+    case ServiceKey.qbittorrent:
+      return '/api/v2/app/version';
   }
 }
 
 Future<ServiceConnectionStatus> _verifyService(
-  ServiceKey service,
-  String url,
-  String apiKey,
-) async {
+  ServiceKey service, {
+  required String url,
+  required String apiKey,
+  required String username,
+  required String password,
+}) async {
+  if (!service.usesApiKey) {
+    final urlTrimmed = url.trim();
+    if (urlTrimmed.isEmpty) return ServiceConnectionStatus.notConfigured;
+    final client = QbittorrentClient(
+      url: urlTrimmed,
+      username: username.trim().isEmpty ? null : username.trim(),
+      password: password.isEmpty ? null : password,
+    );
+    try {
+      await client.getVersion().timeout(const Duration(seconds: 5));
+      return ServiceConnectionStatus.connected;
+    } catch (_) {
+      return ServiceConnectionStatus.disconnected;
+    } finally {
+      client.close();
+    }
+  }
   if (url.trim().isEmpty || apiKey.trim().isEmpty) {
     return ServiceConnectionStatus.notConfigured;
   }
@@ -86,6 +110,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final Map<ServiceKey, TextEditingController> _apiKeyCtrl = {
     for (final k in ServiceKey.values) k: TextEditingController(),
   };
+  final Map<ServiceKey, TextEditingController> _usernameCtrl = {
+    for (final k in ServiceKey.values) k: TextEditingController(),
+  };
+  final Map<ServiceKey, TextEditingController> _passwordCtrl = {
+    for (final k in ServiceKey.values) k: TextEditingController(),
+  };
   final Map<ServiceKey, ServiceConnectionStatus?> _verifyStatus = {
     for (final k in ServiceKey.values) k: null,
   };
@@ -98,13 +128,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _pageController.dispose();
     for (final c in _urlCtrl.values) c.dispose();
     for (final c in _apiKeyCtrl.values) c.dispose();
+    for (final c in _usernameCtrl.values) c.dispose();
+    for (final c in _passwordCtrl.values) c.dispose();
     super.dispose();
   }
 
-  bool _isServiceReady(ServiceKey k) =>
-      _enabled[k]! &&
-      _urlCtrl[k]!.text.trim().isNotEmpty &&
-      _apiKeyCtrl[k]!.text.trim().isNotEmpty;
+  bool _isServiceReady(ServiceKey k) {
+    if (!_enabled[k]!) return false;
+    if (_urlCtrl[k]!.text.trim().isEmpty) return false;
+    if (!k.usesApiKey) return true;
+    return _apiKeyCtrl[k]!.text.trim().isNotEmpty;
+  }
 
   List<ServiceKey> get _configuredServices =>
       ServiceKey.values.where(_isServiceReady).toList();
@@ -113,8 +147,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _verifying[service] = true);
     final status = await _verifyService(
       service,
-      _urlCtrl[service]!.text,
-      _apiKeyCtrl[service]!.text,
+      url: _urlCtrl[service]!.text,
+      apiKey: _apiKeyCtrl[service]!.text,
+      username: _usernameCtrl[service]!.text,
+      password: _passwordCtrl[service]!.text,
     );
     if (!mounted) return;
     setState(() {
@@ -123,29 +159,60 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
   }
 
-  /// Persists only the enabled+filled services, then moves to step 3.
   Future<void> _saveAndContinue() async {
     final current = ref.read(currentSettingsProvider);
     var updated = current;
     for (final k in ServiceKey.values) {
       if (_isServiceReady(k)) {
-        updated = updated.copyWithService(
-          k,
-          url: _urlCtrl[k]!.text.trim(),
-          apiKey: _apiKeyCtrl[k]!.text.trim(),
-        );
+        if (k == ServiceKey.qbittorrent) {
+          updated = updated.copyWithQbittorrent(
+            url: _urlCtrl[k]!.text.trim(),
+            username: _usernameCtrl[k]!.text.trim(),
+            password: _passwordCtrl[k]!.text,
+          );
+        } else {
+          updated = updated.copyWithService(
+            k,
+            url: _urlCtrl[k]!.text.trim(),
+            apiKey: _apiKeyCtrl[k]!.text.trim(),
+          );
+        }
       } else {
-        // Clear any previously saved credentials for disabled services
-        updated = updated.copyWithService(k, url: '', apiKey: '');
+        if (k == ServiceKey.qbittorrent) {
+          updated = updated.copyWithQbittorrent(
+            url: '',
+            username: '',
+            password: '',
+          );
+        } else {
+          updated = updated.copyWithService(k, url: '', apiKey: '');
+        }
       }
     }
-    await ref.read(settingsProvider.notifier).updateSettings(updated);
+    try {
+      await ref.read(settingsProvider.notifier).updateSettings(updated);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't save your services. Please try again. ($e)",
+      );
+      return;
+    }
     _goToStep(2);
   }
 
   /// Marks onboarding complete — triggers router redirect to /services.
   Future<void> _finish() async {
-    await markOnboardingComplete(ref);
+    try {
+      await markOnboardingComplete(ref);
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't finish setup. Please try again. ($e)",
+      );
+    }
   }
 
   void _goToStep(int step) {
@@ -198,6 +265,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     enabled: _enabled,
                     urlCtrl: _urlCtrl,
                     apiKeyCtrl: _apiKeyCtrl,
+                    usernameCtrl: _usernameCtrl,
+                    passwordCtrl: _passwordCtrl,
                     verifyStatus: _verifyStatus,
                     verifying: _verifying,
                     onToggle: (k, v) => setState(() {
@@ -211,7 +280,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _ReadyStep(
                     configuredServices: _configuredServices,
                     verifyStatus: _verifyStatus,
-                    onReviewSettings: _finish,
+                    onReviewSettings: () async => _goToStep(1),
                     onFinish: _finish,
                   ),
                 ],
@@ -468,6 +537,8 @@ class _ServicesStep extends StatelessWidget {
     required this.enabled,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onToggle,
@@ -479,6 +550,8 @@ class _ServicesStep extends StatelessWidget {
   final Map<ServiceKey, bool> enabled;
   final Map<ServiceKey, TextEditingController> urlCtrl;
   final Map<ServiceKey, TextEditingController> apiKeyCtrl;
+  final Map<ServiceKey, TextEditingController> usernameCtrl;
+  final Map<ServiceKey, TextEditingController> passwordCtrl;
   final Map<ServiceKey, ServiceConnectionStatus?> verifyStatus;
   final Map<ServiceKey, bool> verifying;
   final void Function(ServiceKey, bool) onToggle;
@@ -540,6 +613,8 @@ class _ServicesStep extends StatelessWidget {
                           isEnabled: enabled[k]!,
                           urlCtrl: urlCtrl[k]!,
                           apiKeyCtrl: apiKeyCtrl[k]!,
+                          usernameCtrl: usernameCtrl[k]!,
+                          passwordCtrl: passwordCtrl[k]!,
                           verifyStatus: verifyStatus[k],
                           verifying: verifying[k]!,
                           onToggle: (v) => onToggle(k, v),
@@ -577,6 +652,8 @@ class _ServiceCard extends StatelessWidget {
     required this.isEnabled,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onToggle,
@@ -587,6 +664,8 @@ class _ServiceCard extends StatelessWidget {
   final bool isEnabled;
   final TextEditingController urlCtrl;
   final TextEditingController apiKeyCtrl;
+  final TextEditingController usernameCtrl;
+  final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
   final bool verifying;
   final ValueChanged<bool> onToggle;
@@ -656,6 +735,8 @@ class _ServiceCard extends StatelessWidget {
               serviceKey: serviceKey,
               urlCtrl: urlCtrl,
               apiKeyCtrl: apiKeyCtrl,
+              usernameCtrl: usernameCtrl,
+              passwordCtrl: passwordCtrl,
               verifyStatus: verifyStatus,
               verifying: verifying,
               onVerify: onVerify,
@@ -720,6 +801,8 @@ class _ServiceConfig extends StatelessWidget {
     required this.serviceKey,
     required this.urlCtrl,
     required this.apiKeyCtrl,
+    required this.usernameCtrl,
+    required this.passwordCtrl,
     required this.verifyStatus,
     required this.verifying,
     required this.onVerify,
@@ -729,6 +812,8 @@ class _ServiceConfig extends StatelessWidget {
   final ServiceKey serviceKey;
   final TextEditingController urlCtrl;
   final TextEditingController apiKeyCtrl;
+  final TextEditingController usernameCtrl;
+  final TextEditingController passwordCtrl;
   final ServiceConnectionStatus? verifyStatus;
   final bool verifying;
   final VoidCallback onVerify;
@@ -770,12 +855,49 @@ class _ServiceConfig extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _ConfigField(label: 'Base URL', controller: urlCtrl, isUrl: true),
-              const SizedBox(height: 10),
-              _ConfigField(
-                label: 'API key',
-                controller: apiKeyCtrl,
-                isPassword: true,
-              ),
+              if (serviceKey.usesApiKey) ...[
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'API key',
+                  controller: apiKeyCtrl,
+                  isPassword: true,
+                ),
+              ] else if (serviceKey == ServiceKey.qbittorrent) ...[
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'Username (optional)',
+                  controller: usernameCtrl,
+                ),
+                const SizedBox(height: 10),
+                _ConfigField(
+                  label: 'Password (optional)',
+                  controller: passwordCtrl,
+                  isPassword: true,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Leave credentials empty if your qBittorrent instance does not require authentication.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: _muted,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (serviceKey == ServiceKey.qbittorrent &&
+                  verifyStatus == ServiceConnectionStatus.disconnected) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Could not reach the instance. Double-check the URL and credentials.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Color(0xFFFCA5A5),
+                    height: 1.5,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               // Verify row
               Row(

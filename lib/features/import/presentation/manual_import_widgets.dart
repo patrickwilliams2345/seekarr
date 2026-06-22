@@ -12,7 +12,7 @@ extension ManualImportServiceCopy on ServiceKey {
       ServiceKey.radarr => 'Movies',
       ServiceKey.sonarr => 'Series',
       ServiceKey.lidarr => 'Music',
-      ServiceKey.seerr => 'Requests',
+      _ => 'Requests',
     };
   }
 
@@ -21,7 +21,7 @@ extension ManualImportServiceCopy on ServiceKey {
       ServiceKey.radarr => 'Manual import movies',
       ServiceKey.sonarr => 'Manual import series',
       ServiceKey.lidarr => 'Manual import music',
-      ServiceKey.seerr => 'Manual import requests',
+      _ => 'Manual import requests',
     };
   }
 
@@ -30,7 +30,7 @@ extension ManualImportServiceCopy on ServiceKey {
       ServiceKey.radarr => 'Search movie...',
       ServiceKey.sonarr => 'Search series...',
       ServiceKey.lidarr => 'Search artist...',
-      ServiceKey.seerr => 'Search...',
+      _ => 'Search...',
     };
   }
 }

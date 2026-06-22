@@ -227,7 +227,7 @@ class ManualImportItem {
       ServiceKey.radarr => movie != null,
       ServiceKey.sonarr => series != null && episodes.isNotEmpty,
       ServiceKey.lidarr => artist != null && album != null && tracks.isNotEmpty,
-      ServiceKey.seerr => false,
+      _ => false,
     };
   }
 
@@ -268,7 +268,7 @@ class ManualImportItem {
                 .whereType<int>()
                 .where((id) => id > 0)
                 .isEmpty,
-      ServiceKey.seerr => true,
+      _ => true,
     };
   }
 
@@ -313,7 +313,7 @@ class ManualImportItem {
             ? tracks
             : [assignment.track!.raw];
         break;
-      case ServiceKey.seerr:
+      case _:
         break;
     }
 
@@ -413,57 +413,6 @@ class ManualImportItem {
     return parts.isEmpty ? 'Needs assignment' : parts.join(' · ');
   }
 
-  ManualImportItem mergedWithReprocessed(ManualImportItem reprocessed) {
-    return ManualImportItem(
-      id: reprocessed.id != 0 ? reprocessed.id : id,
-      path: reprocessed.path.isNotEmpty ? reprocessed.path : path,
-      relativePath: reprocessed.relativePath ?? relativePath,
-      folderName: reprocessed.folderName ?? folderName,
-      name: reprocessed.name.isNotEmpty ? reprocessed.name : name,
-      size: reprocessed.size > 0 ? reprocessed.size : size,
-      movie: reprocessed.movie ?? movie,
-      movieFileId: reprocessed.movieFileId ?? movieFileId,
-      series: reprocessed.series ?? series,
-      seasonNumber: reprocessed.seasonNumber ?? seasonNumber,
-      episodes: reprocessed.episodes.isNotEmpty
-          ? reprocessed.episodes
-          : episodes,
-      episodeFileId: reprocessed.episodeFileId ?? episodeFileId,
-      artist: reprocessed.artist ?? artist,
-      album: reprocessed.album ?? album,
-      albumReleaseId: reprocessed.albumReleaseId ?? albumReleaseId,
-      tracks: reprocessed.tracks.isNotEmpty ? reprocessed.tracks : tracks,
-      quality: reprocessed.quality ?? quality,
-      languages: reprocessed.languages.isNotEmpty
-          ? reprocessed.languages
-          : languages,
-      qualityWeight: reprocessed.qualityWeight != 0
-          ? reprocessed.qualityWeight
-          : qualityWeight,
-      releaseGroup: reprocessed.releaseGroup ?? releaseGroup,
-      downloadId: reprocessed.downloadId ?? downloadId,
-      customFormats: reprocessed.customFormats.isNotEmpty
-          ? reprocessed.customFormats
-          : customFormats,
-      customFormatScore: reprocessed.customFormatScore != 0
-          ? reprocessed.customFormatScore
-          : customFormatScore,
-      indexerFlags: reprocessed.indexerFlags != 0
-          ? reprocessed.indexerFlags
-          : indexerFlags,
-      releaseType: reprocessed.releaseType ?? releaseType,
-      audioTags: reprocessed.audioTags ?? audioTags,
-      additionalFile: reprocessed.additionalFile || additionalFile,
-      replaceExistingFiles:
-          reprocessed.replaceExistingFiles || replaceExistingFiles,
-      disableReleaseSwitching:
-          reprocessed.disableReleaseSwitching || disableReleaseSwitching,
-      rejections: reprocessed.rejections.isNotEmpty
-          ? reprocessed.rejections
-          : rejections,
-    );
-  }
-
   String get qualityLabel {
     return _extractQualityName(quality) ?? 'Unknown';
   }
@@ -479,8 +428,7 @@ class ManualImportItem {
   String get languageLabel {
     if (languages.isEmpty) return 'Original';
     return languages
-        .map((item) => mapOrNull(item)?['name'] ?? item)
-        .map((item) => item.toString())
+        .map((item) => (mapOrNull(item)?['name'] ?? item).toString())
         .where((item) => item.trim().isNotEmpty)
         .join(', ');
   }
@@ -530,95 +478,6 @@ class ManualImportItem {
     );
   }
 
-  Map<String, dynamic> toReprocessJson(
-    ServiceKey service, {
-    required ManualImportFixAssignment assignment,
-  }) {
-    final match = assignment.match;
-    final base = <String, dynamic>{
-      'id': id,
-      'path': path,
-      'quality': quality,
-      'languages': service == ServiceKey.lidarr ? null : languages,
-      'releaseGroup': releaseGroup,
-      'downloadId': downloadId,
-      'indexerFlags': indexerFlags,
-      'customFormats': customFormats,
-      'customFormatScore': customFormatScore,
-      'rejections': rejections
-          .map((item) => {'reason': item.reason, 'type': item.type})
-          .toList(growable: false),
-    };
-
-    switch (service) {
-      case ServiceKey.radarr:
-        return _withoutNulls({
-          ...base,
-          'movieId': match.id,
-          'movie': match.raw,
-        });
-      case ServiceKey.sonarr:
-        final episode = assignment.episode;
-        final resolvedEpisodes = assignment.episodes.isNotEmpty
-            ? assignment.episodes
-                  .map((item) => item.raw)
-                  .toList(growable: false)
-            : episode == null
-            ? episodes
-            : [episode.raw];
-        final episodeIds = assignment.episodes.isNotEmpty
-            ? assignment.episodes.map((item) => item.id).toList(growable: false)
-            : episode == null
-            ? episodes
-                  .map((item) => intOrNull(item['id']))
-                  .whereType<int>()
-                  .toList(growable: false)
-            : [episode.id];
-        return _withoutNulls({
-          ...base,
-          'seriesId': match.id,
-          'seasonNumber': episode?.seasonNumber ?? seasonNumber,
-          'episodes': resolvedEpisodes,
-          'episodeIds': episodeIds,
-          'releaseType': releaseType,
-        });
-      case ServiceKey.lidarr:
-        final album = assignment.album;
-        final track = assignment.track;
-        final resolvedTracks = assignment.tracks.isNotEmpty
-            ? assignment.tracks.map((item) => item.raw).toList(growable: false)
-            : track == null
-            ? tracks
-            : [track.raw];
-        final trackIds = assignment.tracks.isNotEmpty
-            ? assignment.tracks.map((item) => item.id).toList(growable: false)
-            : track == null
-            ? tracks
-                  .map((item) => intOrNull(item['id']))
-                  .whereType<int>()
-                  .toList(growable: false)
-            : [track.id];
-        return _withoutNulls({
-          ...base,
-          'name': name,
-          'artistId': match.id,
-          'albumId': album?.id ?? intOrNull(this.album?['id']),
-          'albumReleaseId':
-              intOrNull(album?.raw['albumReleaseId']) ??
-              intOrNull(track?.raw['albumReleaseId']) ??
-              albumReleaseId,
-          'tracks': resolvedTracks,
-          'trackIds': trackIds,
-          'additionalFile': additionalFile,
-          'replaceExistingFiles': false,
-          'disableReleaseSwitching': disableReleaseSwitching,
-          'languages': null,
-        });
-      case ServiceKey.seerr:
-        throw ArgumentError('Seerr does not support manual import');
-    }
-  }
-
   Map<String, dynamic> toCommandFileJson(ServiceKey service) {
     final base = <String, dynamic>{
       'path': path,
@@ -652,6 +511,8 @@ class ManualImportItem {
       case ServiceKey.lidarr:
         return _withoutNulls({
           ...base,
+          'languages':
+              null, // Lidarr ignores languages in the command file body.
           'artistId': intOrNull(artist?['id']),
           'albumId': intOrNull(album?['id']),
           'albumReleaseId': albumReleaseId,
@@ -661,8 +522,8 @@ class ManualImportItem {
               .toList(),
           'disableReleaseSwitching': disableReleaseSwitching,
         });
-      case ServiceKey.seerr:
-        throw ArgumentError('Seerr does not support manual import');
+      case _:
+        throw ArgumentError('${service.title} does not support manual import');
     }
   }
 }
@@ -688,14 +549,14 @@ class ManualImportLookupResult {
       ServiceKey.radarr || ServiceKey.sonarr => stringOrNull(json['title']),
       ServiceKey.lidarr =>
         stringOrNull(json['artistName']) ?? stringOrNull(json['title']),
-      ServiceKey.seerr => stringOrNull(json['title']),
+      _ => stringOrNull(json['title']),
     };
     final subtitle = switch (service) {
       ServiceKey.radarr || ServiceKey.sonarr => stringOrNull(json['year']),
       ServiceKey.lidarr =>
         stringOrNull(json['disambiguation']) ??
             stringOrNull(json['artistType']),
-      ServiceKey.seerr => null,
+      _ => null,
     };
 
     return ManualImportLookupResult(

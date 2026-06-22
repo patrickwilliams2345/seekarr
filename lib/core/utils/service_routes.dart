@@ -6,6 +6,7 @@ class ServiceRoutes {
   static const radarr = '$services/radarr';
   static const sonarr = '$services/sonarr';
   static const lidarr = '$services/lidarr';
+  static const qbittorrent = '$services/qbittorrent';
 
   static const seerrRequests = '$seerr/requests';
   static const seerrMoviesAll = '$seerr/movies/all';
@@ -15,6 +16,7 @@ class ServiceRoutes {
   static const radarrMovieBase = '$radarr/movie';
   static const sonarrSeriesBase = '$sonarr/series';
   static const lidarrArtistBase = '$lidarr/artist';
+  static const qbittorrentTorrentBase = '$qbittorrent/torrent';
 
   static String radarrMovie(int id, {String? heroTag}) {
     return _withQuery('$radarrMovieBase/$id', {'heroTag': heroTag});
@@ -26,6 +28,10 @@ class ServiceRoutes {
 
   static String lidarrArtist(int id, {String? heroTag}) {
     return _withQuery('$lidarrArtistBase/$id', {'heroTag': heroTag});
+  }
+
+  static String qbittorrentTorrent(String hash) {
+    return '$qbittorrentTorrentBase/$hash';
   }
 
   static String seerrDetail({

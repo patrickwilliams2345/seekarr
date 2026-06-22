@@ -38,11 +38,17 @@ class SettingsServicesScreen extends ConsumerWidget {
                         _DeleteButton(
                           serviceName: service.title,
                           onConfirm: () async {
-                            final cleared = settings.copyWithService(
-                              service,
-                              url: '',
-                              apiKey: '',
-                            );
+                            final cleared = service == ServiceKey.qbittorrent
+                                ? settings.copyWithQbittorrent(
+                                    url: '',
+                                    username: '',
+                                    password: '',
+                                  )
+                                : settings.copyWithService(
+                                    service,
+                                    url: '',
+                                    apiKey: '',
+                                  );
                             await ref
                                 .read(settingsProvider.notifier)
                                 .updateSettings(cleared);
@@ -63,8 +69,7 @@ class SettingsServicesScreen extends ConsumerWidget {
   }
 
   bool _isConfigured(SettingsModel settings, ServiceKey service) {
-    return settings.urlFor(service).isNotEmpty &&
-        settings.apiKeyFor(service).isNotEmpty;
+    return settings.isServiceConfigured(service);
   }
 
   String _serviceSubtitle(SettingsModel settings, ServiceKey service) {

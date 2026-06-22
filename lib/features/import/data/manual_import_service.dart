@@ -8,8 +8,8 @@ import 'package:seekarr/features/settings/domain/service_key.dart';
 
 final manualImportServiceProvider =
     Provider.family<ManualImportService, ServiceKey>((ref, service) {
-      if (service == ServiceKey.seerr) {
-        throw Exception('Seerr does not support manual import');
+      if (!service.supportsManualImport) {
+        throw Exception('${service.title} does not support manual import');
       }
 
       final settings = ref.watch(currentSettingsProvider);
@@ -92,16 +92,20 @@ class ManualImportService {
     );
   }
 
-  Future<ManualImportItem> reprocessItem({
-    required ManualImportItem item,
-    required ManualImportFixAssignment assignment,
+  Future<ManualImportCommandStatus> importItem(
+    ManualImportItem item, {
+    required ManualImportMode importMode,
   }) async {
     final response = await client.post(
-      '$_prefix/manualimport',
-      data: [item.toReprocessJson(service, assignment: assignment)],
+      '$_prefix/command',
+      data: {
+        'name': 'ManualImport',
+        'importMode': importMode.apiValue,
+        if (service == ServiceKey.lidarr) 'replaceExistingFiles': false,
+        'files': [item.toCommandFileJson(service)],
+      },
     );
-    final items = _mappedList(response.data, ManualImportItem.fromJson);
-    return items.isEmpty ? item : items.first;
+    return ManualImportCommandStatus.fromJson(stringKeyMap(response.data));
   }
 
   Future<List<ManualImportEpisode>> getEpisodes({
@@ -192,7 +196,7 @@ class ManualImportService {
       ServiceKey.radarr => 'movie/lookup',
       ServiceKey.sonarr => 'series/lookup',
       ServiceKey.lidarr => 'artist/lookup',
-      ServiceKey.seerr => throw ArgumentError('Seerr does not support lookup'),
+      _ => throw ArgumentError('${service.title} does not support lookup'),
     };
   }
 
@@ -201,7 +205,7 @@ class ManualImportService {
       ServiceKey.radarr => 'movie',
       ServiceKey.sonarr => 'series',
       ServiceKey.lidarr => 'artist',
-      ServiceKey.seerr => throw ArgumentError('Seerr does not support lookup'),
+      _ => throw ArgumentError('${service.title} does not support lookup'),
     };
   }
 }
