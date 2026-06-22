@@ -3,6 +3,8 @@ name: Build Seekarr IPA
 on:
   release:
     types: [published]
+  push:
+    tags: ['*']
   workflow_dispatch:
 
 jobs:
