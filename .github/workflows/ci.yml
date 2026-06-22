@@ -1,10 +1,7 @@
 name: CI
 
 on:
-  # Fork: trigger only on release tags synced from upstream, not every branch push.
-  push:
-    tags:
-      - 'v*'
+  # Fork: disabled — upstream test/CI broken. Run manually if needed.
   workflow_dispatch:
 
 concurrency:
